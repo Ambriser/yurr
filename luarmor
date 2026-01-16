@@ -16,6 +16,7 @@ end
 
 local function writeKey(key)
     writefile(KEY_FILE, trim(key))
+    getgenv().script_key = trim(key)
 end
 
 local function deleteKey()
