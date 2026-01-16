@@ -1,0 +1,89 @@
+local KEY_FILE = "LHub_Key.txt"
+local LOADER = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
+
+local function runLuarmor(key)
+    getgenv().script_key = key
+    loadstring(game:HttpGet(LOADER))()
+    return
+end
+
+-- STEP 1: try saved key FIRST
+if isfile(KEY_FILE) then
+    local key = readfile(KEY_FILE)
+    if key and key ~= "" then
+        runLuarmor(key)
+    end
+end
+
+local Rayfield = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"
+))()
+
+local ReplicatedStorage = game.ReplicatedStorage
+local Packets = require(ReplicatedStorage.Modules.Packets)
+local ItemData = require(ReplicatedStorage.Modules.ItemData)
+local ItemIDS = require(ReplicatedStorage.Modules.ItemIDS)
+local GameUtil = require(ReplicatedStorage.Modules.GameUtil)
+local HttpService = game:GetService("HttpService")
+
+if not (Packets and ItemData and ItemIDS and GameUtil) then
+    Rayfield:Notify({
+        Title = "L Hub",
+        Content = "Executor not supported.",
+        Duration = 6,
+    })
+    return
+end
+
+local KEY_FILE = "LHub_Key.txt"
+local LUARMOR_LOADER = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
+
+local function loadLuarmor()
+    loadstring(game:HttpGet(LUARMOR_LOADER))()
+end
+
+-- try saved key first
+if isfile(KEY_FILE) then
+    local saved = readfile(KEY_FILE)
+    if saved and saved ~= "" then
+        getgenv().script_key = saved
+        loadLuarmor()
+        return
+    end
+end
+
+-- only reaches here if no key or Luarmor rejected it
+local Window = Rayfield:CreateWindow({
+    Name = "L Hub!",
+    LoadingTitle = "Get Key",
+    LoadingSubtitle = "by L",
+    ToggleUIKeybind = "L",
+})
+
+local KeyTab = Window:CreateTab("Key System")
+
+local LuarmorLink = "https://ads.luarmor.net/v/cb/LnDzsGFTqXOu/jhLEbmMFeCKPaoZE"
+local UserKey = ""
+
+KeyTab:CreateButton({
+    Name = "Get Key",
+    Callback = function()
+        setclipboard(LuarmorLink)
+    end,
+})
+
+KeyTab:CreateInput({
+    Name = "Enter Key",
+    Callback = function(text)
+        UserKey = text
+    end,
+})
+
+KeyTab:CreateButton({
+    Name = "Verify Key",
+    Callback = function()
+        if UserKey == "" then return end
+        writefile(KEY_FILE, UserKey)
+        runLuarmor(UserKey)
+    end,
+})
