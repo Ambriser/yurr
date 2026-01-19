@@ -1,5 +1,9 @@
 -- CONFIG
-local SCRIPT_KEY = getgenv().script_key  -- pre-set via loadstring
+local SCRIPT_KEY = getgenv().script_key or _G.script_key or script_key
+if SCRIPT_KEY then
+    getgenv().script_key = SCRIPT_KEY
+end
+
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
 local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
 local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/" .. SCRIPT_ID .. ".lua"
@@ -58,7 +62,6 @@ end
 
 -- BOOT
 if SCRIPT_KEY and loadHub(SCRIPT_KEY) then
-    -- key pre-set and valid → loaded
     return
 end
 
