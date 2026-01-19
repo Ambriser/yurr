@@ -1,66 +1,103 @@
 -- CONFIG
-local SCRIPT_KEY = getgenv().script_key  -- set this before running
-local LOADER_URL = "https://raw.githubusercontent.com/Ambriser/yurr/refs/heads/main/luarmor"
+local SCRIPT_KEY = getgenv().script_key  -- pre-set via loadstring
+local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
+local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
+local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/" .. SCRIPT_ID .. ".lua"
 
 -- UTILS
 local function trim(s)
     return (s or ""):match("^%s*(.-)%s*$")
 end
 
--- LUARMOR LOADER
-local function loadHub(key)
+-- LUARMOR VERIFY
+local function verifyKey(key)
     key = trim(key)
     if not key or #key ~= 32 then
-        warn("Invalid or missing key. Cannot load hub.")
+        warn("Key length invalid")
         return false
     end
 
     getgenv().script_key = key
-    loadstring(game:HttpGet(LOADER_URL))()
-    return true
+
+    local success, api = pcall(function()
+        return loadstring(game:HttpGet(LUARMOR_API_URL))()
+    end)
+
+    if not success or not api then
+        warn("Failed to load Luarmor API")
+        return false
+    end
+
+    api.script_id = SCRIPT_ID
+
+    local ok, status = pcall(function()
+        return api.check_key(key)
+    end)
+
+    if not ok or not status then
+        warn("Key check failed:", status)
+        return false
+    end
+
+    if status.code == "KEY_VALID" then
+        return true
+    else
+        warn("Key invalid:", status.code, status.message)
+        return false
+    end
+end
+
+-- LOAD HUB
+local function loadHub(key)
+    if verifyKey(key) then
+        loadstring(game:HttpGet(LOADER_URL))()
+        return true
+    end
+    return false
 end
 
 -- BOOT
-if SCRIPT_KEY then
-    loadHub(SCRIPT_KEY)  -- pre-set key → skip UI
-else
-    -- fallback to UI if no key provided
-    local Rayfield = loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"
-    ))()
-
-    local Window = Rayfield:CreateWindow({
-        Name = "L Hub! Key Loader",
-        LoadingTitle = "Enter Key",
-        LoadingSubtitle = "by L",
-        ToggleUIKeybind = "L",
-    })
-
-    local KeyTab = Window:CreateTab("Key System")
-    local UserKey = ""
-
-    KeyTab:CreateButton({
-        Name = "Get Key",
-        Callback = function()
-            setclipboard("https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu")
-        end
-    })
-
-    KeyTab:CreateInput({
-        Name = "Enter Key",
-        PlaceholderText = "Paste your 32-char key here",
-        Callback = function(text)
-            UserKey = trim(text)
-        end
-    })
-
-    KeyTab:CreateButton({
-        Name = "Verify Key",
-        Callback = function()
-            if UserKey == "" then return end
-            SCRIPT_KEY = UserKey
-            loadHub(SCRIPT_KEY)  -- load hub if valid
-        end
-    })
+if SCRIPT_KEY and loadHub(SCRIPT_KEY) then
+    -- key pre-set and valid → loaded
+    return
 end
 
+-- FALLBACK: show UI if no key or invalid
+local Rayfield = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"
+))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "L Hub! Key Loader",
+    LoadingTitle = "Enter Key",
+    LoadingSubtitle = "by L",
+    ToggleUIKeybind = "L",
+})
+
+local KeyTab = Window:CreateTab("Key System")
+local UserKey = ""
+
+KeyTab:CreateButton({
+    Name = "Get Key",
+    Callback = function()
+        setclipboard("https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu")
+    end
+})
+
+KeyTab:CreateInput({
+    Name = "Enter Key",
+    PlaceholderText = "Paste your 32-char key here",
+    Callback = function(text)
+        UserKey = trim(text)
+    end
+})
+
+KeyTab:CreateButton({
+    Name = "Verify Key",
+    Callback = function()
+        if UserKey == "" then return end
+        if loadHub(UserKey) then
+            print("Key valid, hub loaded.")
+        end
+    end
+})
