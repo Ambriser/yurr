@@ -1,35 +1,119 @@
-local kf="LHub_Key.txt"
-local lu="https://sdkapi-public.luarmor.net/library.lua"
-local sid="42f92b639d0394ac5806de25b07e26d5"
-local ll="https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
-local gk="https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
-local function t(s)return(s or ""):match("^%s*(.-)%s*$")end
-local function r()return isfile(kf)and t(readfile(kf))end
-local function w(k)writefile(kf,t(k))getgenv().script_key=t(k)end
-local function d()if isfile(kf)then delfile(kf)end end
-local function tl(k)
-if not k then return false end
-k=t(k)
-if#k~=32 then warn("Key len invalid:",#k)return false end
-getgenv().script_key=k
-local ok,a=pcall(function()return loadstring(game:HttpGet(lu))()end)
-if not ok or not a then warn("Luarmor load fail")return false end
-a.script_id=sid
-local ok2,s=pcall(function()return a.check_key(k)end)
-print("API:",ok2,s and s.code,s and s.message)
-if not ok2 or not s then warn("API fail:",s)return false end
-if s.code=="KEY_VALID"then loadstring(game:HttpGet(ll))()return true
-else warn("Key invalid:",s.code,s.message)return false end
+-- CONFIG
+local KEY_FILE = "LHub_Key.txt"
+local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
+local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
+local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
+local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
+
+-- UTILS
+local function trim(s)
+    return (s or ""):match("^%s*(.-)%s*$")
 end
+
+local function readKey()
+    return isfile(KEY_FILE) and trim(readfile(KEY_FILE)) or nil
+end
+
+local function writeKey(key)
+    writefile(KEY_FILE, trim(key))
+    getgenv().script_key = trim(key)
+end
+
+local function deleteKey()
+    if isfile(KEY_FILE) then
+        delfile(KEY_FILE)
+    end
+end
+
+-- LUARMOR CHECK
+local function tryLuarmor(key)
+    if not key then return false end
+    key = trim(key)
+
+    if #key ~= 32 then
+        warn("Key length invalid:", #key)
+        return false
+    end
+
+    getgenv().script_key = key
+
+    local success, api = pcall(function()
+        return loadstring(game:HttpGet(LUARMOR_API_URL))()
+    end)
+
+    if not success or not api then
+        warn("Failed to load Luarmor API")
+        return false
+    end
+
+    api.script_id = SCRIPT_ID
+
+    local ok, status = pcall(function()
+        return api.check_key(key)
+    end)
+
+    print("API check result:", ok, status and status.code, status and status.message)
+
+    if not ok or not status then
+        warn("API check failed:", status)
+        return false
+    end
+
+    if status.code == "KEY_VALID" then
+        loadstring(game:HttpGet(LOADER_URL))()
+        return true
+    else
+        warn("Key invalid:", status.code, status.message)
+        return false
+    end
+end
+
+-- LOADER (always opens UI if key invalid/missing)
 local function Load()
-local k=r()
-if k and tl(k)then return end
-local R=loadstring(game:HttpGet("https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"))()
-local W=R:CreateWindow({Name="LH Key",LoadingTitle="Enter Key",LoadingSubtitle="by L",ToggleUIKeybind="L"})
-local T=W:CreateTab("Key")
-local u=""
-T:CreateButton({Name="Get Key",Callback=function()setclipboard(gk)end})
-T:CreateInput({Name="Enter",PlaceholderText="Paste 32-char key",Callback=function(i)u=t(i)end})
-T:CreateButton({Name="Verify",Callback=function()if u==""then return end w(u)Load()end})
+    local key = readKey()
+    if key and tryLuarmor(key) then
+        return  -- valid → load script
+    end
+
+    -- Key missing or invalid → show Get Key UI
+    local Rayfield = loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"
+    ))()
+
+    local Window = Rayfield:CreateWindow({
+        Name = "L Hub! Key Loader",
+        LoadingTitle = "Enter Key",
+        LoadingSubtitle = "by L",
+        ToggleUIKeybind = "L",
+    })
+
+    local KeyTab = Window:CreateTab("Key System")
+    local UserKey = ""
+
+    KeyTab:CreateButton({
+        Name = "Get Key",
+        Callback = function()
+            setclipboard(GET_KEY_LINK)
+        end
+    })
+
+    KeyTab:CreateInput({
+        Name = "Enter Key",
+        PlaceholderText = "Paste your 32-char key here",
+        Callback = function(text)
+            UserKey = trim(text)
+        end
+    })
+
+    KeyTab:CreateButton({
+        Name = "Verify Key",
+        Callback = function()
+            if UserKey == "" then return end
+            writeKey(UserKey)
+            Load()  -- recheck key and load if valid
+        end
+    })
 end
+
+-- BOOT
 Load()
