@@ -11,12 +11,15 @@ local function trim(s)
 end
 
 local function readKey()
-    return isfile(KEY_FILE) and trim(readfile(KEY_FILE)) or nil
+    if isfile(KEY_FILE) then
+        return trim(readfile(KEY_FILE))
+    end
 end
 
 local function writeKey(key)
-    writefile(KEY_FILE, trim(key))
-    getgenv().script_key = trim(key)
+    key = trim(key)
+    writefile(KEY_FILE, key)
+    getgenv().script_key = key
 end
 
 local function deleteKey()
@@ -27,55 +30,45 @@ end
 
 -- LUARMOR CHECK
 local function tryLuarmor(key)
-    if not key then return false end
-    key = trim(key)
-
-    if #key ~= 32 then
-        warn("Key length invalid:", #key)
+    if not key or #key ~= 32 then
         return false
     end
 
     getgenv().script_key = key
 
-    local success, api = pcall(function()
+    local ok, api = pcall(function()
         return loadstring(game:HttpGet(LUARMOR_API_URL))()
     end)
-
-    if not success or not api then
-        warn("Failed to load Luarmor API")
+    if not ok or not api then
         return false
     end
 
     api.script_id = SCRIPT_ID
 
-    local ok, status = pcall(function()
+    local success, status = pcall(function()
         return api.check_key(key)
     end)
-
-    print("API check result:", ok, status and status.code, status and status.message)
-
-    if not ok or not status then
-        warn("API check failed:", status)
+    if not success or not status then
         return false
     end
 
     if status.code == "KEY_VALID" then
         loadstring(game:HttpGet(LOADER_URL))()
         return true
-    else
-        warn("Key invalid:", status.code, status.message)
-        return false
     end
+
+    return false
 end
 
--- LOADER (always opens UI if key invalid/missing)
+-- LOADER
 local function Load()
-    local key = readKey()
-    if key and tryLuarmor(key) then
-        return  -- valid → load script
+    local savedKey = readKey()
+    if savedKey and tryLuarmor(savedKey) then
+        return
     end
 
-    -- Key missing or invalid → show Get Key UI
+    deleteKey()
+
     local Rayfield = loadstring(game:HttpGet(
         "https://raw.githubusercontent.com/LawlietSHub/Library/refs/heads/main/customFluent"
     ))()
@@ -108,17 +101,13 @@ local function Load()
     KeyTab:CreateButton({
         Name = "Verify Key",
         Callback = function()
-            if UserKey == "" then return end
+            if #UserKey ~= 32 then return end
             writeKey(UserKey)
-            Load()  -- recheck key and load if valid
+            Rayfield:Destroy()
+            Load()
         end
     })
 end
 
 -- BOOT
-Load()        if UserKey == "" then return end
-        if loadHub(UserKey) then
-            print("Key valid, hub loaded.")
-        end
-    end
-})
+Load()
