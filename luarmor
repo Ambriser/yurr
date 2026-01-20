@@ -83,7 +83,7 @@ local function Load()
     local UserKey = ""
 
     KeyTab:CreateButton({
-        Name = "Get Key",
+        Name = "Copy Key Link",
         Callback = function()
             setclipboard(GET_KEY_LINK)
         end
