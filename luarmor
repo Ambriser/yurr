@@ -3,7 +3,7 @@ local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac580
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
-
+-- ❌ never auto-run saved keys
 if isfile and isfile(KEY_FILE) then
     delfile(KEY_FILE)
 end
@@ -15,7 +15,17 @@ local function runLoader(key)
     loadstring(game:HttpGet(LOADER_URL))()
 end
 
+-- ✅ AUTO-RUN IF script_key IS PROVIDED
+if script_key and type(script_key) == "string" then
+    local cleaned = string.gsub(script_key, "%s+", "")
+    if #cleaned == 32 then
+        -- ⚠️ if invalid, Luarmor will kick (cannot prevent)
+        runLoader(cleaned)
+        return
+    end
+end
 
+-- 🪟 UI ONLY if no valid script_key was provided
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
@@ -55,11 +65,10 @@ KeyTab:CreateButton({
             return
         end
 
-
-
+        -- ⚠️ invalid key = kick (Luarmor behavior)
         runLoader(UserKey)
 
-
+        -- reached only if hub loads successfully
         if writefile then
             writefile(KEY_FILE, SCRIPT_ID .. "\n" .. UserKey)
         end
