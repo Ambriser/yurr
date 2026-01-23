@@ -3,21 +3,27 @@ local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac580
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
-local function tryLoad(key)
+local loaderAttempted = false
+
+local function runLoader(key)
+    if loaderAttempted then
+        return false
+    end
+
+    loaderAttempted = true
+
     script_key = key
     _G.script_key = key
     getgenv().script_key = key
 
-    local ok = pcall(function()
+    return pcall(function()
         loadstring(game:HttpGet(LOADER_URL))()
     end)
-
-    return ok
 end
 
-
+-- executor key
 if script_key and #script_key == 32 then
-    if tryLoad(script_key) then
+    if runLoader(script_key) then
         if writefile then
             writefile(KEY_FILE, script_key)
         end
@@ -25,11 +31,11 @@ if script_key and #script_key == 32 then
     end
 end
 
-
+-- saved key
 if isfile and isfile(KEY_FILE) then
     local savedKey = string.gsub(readfile(KEY_FILE), "%s+", "")
     if #savedKey == 32 then
-        if tryLoad(savedKey) then
+        if runLoader(savedKey) then
             return
         else
             delfile(KEY_FILE)
@@ -39,7 +45,7 @@ if isfile and isfile(KEY_FILE) then
     end
 end
 
-
+-- UI (ONLY path left)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
@@ -79,17 +85,14 @@ KeyTab:CreateButton({
             return
         end
 
-        if tryLoad(UserKey) then
+        if runLoader(UserKey) then
             writefile(KEY_FILE, UserKey)
             Rayfield:Destroy()
         else
-            if isfile and isfile(KEY_FILE) then
-                delfile(KEY_FILE)
-            end
             Rayfield:Notify({
                 Title = "Invalid Key",
-                Content = "Key verification failed",
-                Duration = 3
+                Content = "Restart game to retry key",
+                Duration = 4
             })
         end
     end
