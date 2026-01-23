@@ -1,4 +1,6 @@
-
+if isfile and delfile and isfile("LHub_Key.txt") then
+    delfile("LHub_Key.txt")
+end
 
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
 local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
