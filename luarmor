@@ -3,28 +3,9 @@ local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac580
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
-local function saveKey(key)
-    if writefile then
-        writefile(KEY_FILE, SCRIPT_ID .. "\n" .. key)
-    end
-end
 
-local function loadSavedKey()
-    if not isfile or not isfile(KEY_FILE) then
-        return nil
-    end
-
-    local data = string.split(readfile(KEY_FILE), "\n")
-    if #data ~= 2 then
-        delfile(KEY_FILE)
-        return nil
-    end
-
-    if data[1] ~= SCRIPT_ID then
-        return nil
-    end
-
-    return string.gsub(data[2], "%s+", "")
+if isfile and isfile(KEY_FILE) then
+    delfile(KEY_FILE)
 end
 
 local function runLoader(key)
@@ -34,14 +15,7 @@ local function runLoader(key)
     loadstring(game:HttpGet(LOADER_URL))()
 end
 
--- ✅ ONLY auto-load if key was validated before
-local savedKey = loadSavedKey()
-if savedKey and #savedKey == 32 then
-    runLoader(savedKey)
-    return
-end
 
--- 🪟 UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
@@ -81,8 +55,13 @@ KeyTab:CreateButton({
             return
         end
 
-        -- ⚠️ Loader MAY kick here (cannot prevent)
-        saveKey(UserKey)
+
+
         runLoader(UserKey)
+
+
+        if writefile then
+            writefile(KEY_FILE, SCRIPT_ID .. "\n" .. UserKey)
+        end
     end
 })
