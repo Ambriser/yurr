@@ -3,104 +3,95 @@ local LOADER_URL = "https://raw.githubusercontent.com/Ambriser/yurr/refs/heads/m
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
--- Global variable cleanup for Luarmor compatibility
-getgenv().script_id = SCRIPT_ID
-
--- Unified loader function
+-- Helper to handle the Luarmor load
 local function tryLoad(key)
-    _G.script_key = key
-    getgenv().script_key = key
+    if not key or #key ~= 32 then return end
     
-    -- Attempting to load the script
+    -- Luarmor requires these specific globals to be set before loading
+    getgenv().script_key = key
+    getgenv().script_id = SCRIPT_ID
+    _G.script_key = key
+    _G.script_id = SCRIPT_ID
+
+    -- Use pcall to prevent the UI from freezing/crashing on a bad key
     local success, err = pcall(function()
         loadstring(game:HttpGet(LOADER_URL))()
     end)
 
     if success then
-        -- Only save the key if the load was successful
-        if writefile then
-            writefile(KEY_FILE, key)
-        end
+        if writefile then writefile(KEY_FILE, key) end
     else
-        -- If it failed, the key was likely invalid; remove the file
-        if isfile(KEY_FILE) then
-            delfile(KEY_FILE)
-        end
-        warn("L Hub: Verification failed. Key might be expired or invalid.")
+        warn("L Hub: Load failed. Key may be invalid.")
     end
 end
 
--- 1. Check if a valid key is already saved
+-- 1. Auto-login check
 if isfile and isfile(KEY_FILE) then
-    local savedKey = readfile(KEY_FILE):gsub("%s+", "")
-    if #savedKey == 32 then
-        task.spawn(tryLoad, savedKey)
-        return
+    local saved = readfile(KEY_FILE):gsub("%s+", "")
+    if #saved == 32 then
+        tryLoad(saved)
+        return -- Exit to prevent UI from showing
     end
 end
 
--- 2. Check if script_key was passed globally (e.g., from an executor's auto-exec)
-if getgenv().script_key and #getgenv().script_key == 32 then
-    tryLoad(getgenv().script_key)
-    return
-end
-
--- 3. Load UI if no valid key is found
+-- 2. Load Rayfield UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
 local Window = Rayfield:CreateWindow({
     Name = "L Hub! Key System",
-    LoadingTitle = "Key Required",
+    LoadingTitle = "Checking Authorization...",
     LoadingSubtitle = "by L",
-    ConfigurationSaving = {
-        Enabled = false
-    },
-    KeySystem = false -- We are using a custom tab instead
+    ConfigurationSaving = { Enabled = false }
 })
 
-local Tab = Window:CreateTab("Key Verification", 4483362458) -- Added an icon ID
-local UserKey = ""
+local Tab = Window:CreateTab("Verification")
+_G.LHub_UserKey = "" -- Using global for reliable access between UI elements
 
-Tab:CreateButton({
-    Name = "Get Key (Copy Link)",
-    Callback = function()
-        if setclipboard then
-            setclipboard(GET_KEY_LINK)
-            Rayfield:Notify({
-                Title = "Link Copied",
-                Content = "The key link has been copied to your clipboard!",
-                Duration = 5
-            })
-        end
-    end
-})
+Tab:CreateLabel("Please enter your 32-character key")
 
 Tab:CreateInput({
     Name = "Enter Key",
-    PlaceholderText = "Paste 32-character key here",
+    PlaceholderText = "Paste key here...",
     RemoveTextAfterFocusLost = false,
-    Callback = function(text)
-        UserKey = text:gsub("%s+", "")
+    Callback = function(Text)
+        _G.LHub_UserKey = Text:gsub("%s+", "")
+    end,
+})
+
+Tab:CreateButton({
+    Name = "Verify Key",
+    Callback = function()
+        local currentKey = _G.LHub_UserKey
+        
+        if #currentKey == 32 then
+            Rayfield:Notify({
+                Title = "Processing",
+                Content = "Contacting Luarmor Servers...",
+                Duration = 2
+            })
+            
+            tryLoad(currentKey)
+            
+            -- Small delay before closing UI to allow the loader to start
+            task.wait(1)
+            Rayfield:Destroy()
+        else
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Invalid key length ("..#currentKey.."/32).",
+                Duration = 4
+            })
+        end
     end
 })
 
 Tab:CreateButton({
-    Name = "Verify & Start",
+    Name = "Get Key Link",
     Callback = function()
-        if #UserKey == 32 then
-            Rayfield:Notify({
-                Title = "Verifying",
-                Content = "Checking key with Luarmor servers...",
-                Duration = 2
-            })
-            tryLoad(UserKey)
-            Rayfield:Destroy()
-        else
-            Rayfield:Notify({
-                Title = "Invalid Length",
-                Content = "Luarmor keys must be exactly 32 characters.",
-                Duration = 5
-            })
-        end
+        setclipboard(GET_KEY_LINK)
+        Rayfield:Notify({
+            Title = "Clipboard",
+            Content = "Link copied! Paste it into your browser.",
+            Duration = 5
+        })
     end
 })
