@@ -1,82 +1,79 @@
-if isfile and delfile and isfile("LHub_Key.txt") then
-    delfile("LHub_Key.txt")
-end
-
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
-local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
+local LOADER_URL = "https://raw.githubusercontent.com/Ambriser/yurr/refs/heads/main/luarmor"
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
--- expose executor key everywhere Luarmor may read
-if script_key and #script_key == 32 then
-    _G.script_key = script_key
-    getgenv().script_key = script_key
+-- unified loader
+local function tryLoad(key)
+    script_key = key
+    script_id = SCRIPT_ID
 
-    local ok = pcall(function()
-        loadstring(game:HttpGet(LOADER_URL))()
-    end)
+    _G.script_key = key
+    _G.script_id = SCRIPT_ID
 
-    if ok then
-        -- save key for next time
-        if writefile then
-            writefile(KEY_FILE, script_key)
-        end
-        return -- STOP SCRIPT, HUB LOADED
+    getgenv().script_key = key
+    getgenv().script_id = SCRIPT_ID
+
+    -- delete first so invalid keys never persist
+    if isfile and delfile and isfile(KEY_FILE) then
+        delfile(KEY_FILE)
+    end
+
+    -- if key is invalid, Luarmor kicks here
+    loadstring(game:HttpGet(LOADER_URL))()
+
+    -- if we reach here, key is valid
+    if writefile then
+        writefile(KEY_FILE, key)
     end
 end
 
-
-
+-- auto-load saved key
 if isfile and isfile(KEY_FILE) then
-    local savedKey = string.gsub(readfile(KEY_FILE), "%s+", "")
-
-    if #savedKey == 32 then
-        script_key = savedKey
-        _G.script_key = savedKey
-        getgenv().script_key = savedKey
-
-        local ok = pcall(function()
-            loadstring(game:HttpGet(LOADER_URL))()
-        end)
-
-        if ok then
-            return -- STOP SCRIPT, HUB LOADED
-        else
-            delfile(KEY_FILE)
-        end
+    local savedKey = readfile(KEY_FILE)
+    if savedKey and #savedKey == 32 then
+        tryLoad(savedKey)
+        return
     end
 end
 
+-- script_key passed directly
+if script_key and #script_key == 32 then
+    tryLoad(script_key)
+    return
+end
 
-
+-- UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "L Hub! Key Loader",
-    LoadingTitle = "Enter Key",
+    Name = "L Hub! Key System",
+    LoadingTitle = "Key Required",
     LoadingSubtitle = "by L",
     ToggleUIKeybind = "L",
 })
 
-local KeyTab = Window:CreateTab("Key System")
+local Tab = Window:CreateTab("Key")
 local UserKey = ""
 
-KeyTab:CreateButton({
+Tab:CreateButton({
     Name = "Copy Key Link",
     Callback = function()
-        setclipboard(GET_KEY_LINK)
+        if setclipboard then
+            setclipboard(GET_KEY_LINK)
+        end
     end
 })
 
-KeyTab:CreateInput({
+Tab:CreateInput({
     Name = "Enter Key",
-    PlaceholderText = "Paste your 32-char key here",
+    PlaceholderText = "32-character key",
     Callback = function(text)
-        UserKey = string.gsub(text or "", "%s+", "")
+        UserKey = (text or ""):gsub("%s+", "")
     end
 })
 
-KeyTab:CreateButton({
+Tab:CreateButton({
     Name = "Verify Key",
     Callback = function()
         if #UserKey ~= 32 then
@@ -88,24 +85,7 @@ KeyTab:CreateButton({
             return
         end
 
-        -- expose key
-        script_key = UserKey
-        _G.script_key = UserKey
-        getgenv().script_key = UserKey
-
-        local ok = pcall(function()
-            loadstring(game:HttpGet(LOADER_URL))()
-        end)
-
-        if ok then
-            writefile(KEY_FILE, UserKey)
-            Rayfield:Destroy()
-        else
-            Rayfield:Notify({
-                Title = "Invalid Key",
-                Content = "Key verification failed",
-                Duration = 3
-            })
-        end
+        tryLoad(UserKey)
+        Rayfield:Destroy()
     end
 })
