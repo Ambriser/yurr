@@ -1,4 +1,5 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
 -- CONFIG
 local KEY_FILE = "LHub_Key.txt"
 local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
@@ -31,6 +32,7 @@ end
 
 -- LUARMOR CHECK
 local function tryLuarmor(key)
+    key = trim(key)
     if not key or #key ~= 32 then
         return false
     end
@@ -54,6 +56,7 @@ local function tryLuarmor(key)
     end
 
     if status.code == "KEY_VALID" then
+        writeKey(key)
         loadstring(game:HttpGet(LOADER_URL))()
         return true
     end
@@ -63,15 +66,21 @@ end
 
 -- LOADER
 local function Load()
+    -- 1️⃣ executor-passed key
+    if getgenv().script_key and tryLuarmor(getgenv().script_key) then
+        return
+    end
+
+    -- 2️⃣ saved key
     local savedKey = readKey()
     if savedKey and tryLuarmor(savedKey) then
         return
     end
 
+    -- invalid → clean up
     deleteKey()
 
-    
-
+    -- 3️⃣ UI fallback
     local Window = Rayfield:CreateWindow({
         Name = "L Hub! Key Loader",
         LoadingTitle = "Enter Key",
@@ -101,9 +110,9 @@ local function Load()
         Name = "Verify Key",
         Callback = function()
             if #UserKey ~= 32 then return end
-            writeKey(UserKey)
-            Rayfield:Destroy()
-            Load()
+            if tryLuarmor(UserKey) then
+                Rayfield:Destroy()
+            end
         end
     })
 end
