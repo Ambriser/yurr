@@ -3,49 +3,45 @@ local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac580
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
-local loaderAttempted = false
+local function saveKey(key)
+    if writefile then
+        writefile(KEY_FILE, SCRIPT_ID .. "\n" .. key)
+    end
+end
 
-local function runLoader(key)
-    if loaderAttempted then
-        return false
+local function loadSavedKey()
+    if not isfile or not isfile(KEY_FILE) then
+        return nil
     end
 
-    loaderAttempted = true
+    local data = string.split(readfile(KEY_FILE), "\n")
+    if #data ~= 2 then
+        delfile(KEY_FILE)
+        return nil
+    end
 
+    if data[1] ~= SCRIPT_ID then
+        return nil
+    end
+
+    return string.gsub(data[2], "%s+", "")
+end
+
+local function runLoader(key)
     script_key = key
     _G.script_key = key
     getgenv().script_key = key
-
-    return pcall(function()
-        loadstring(game:HttpGet(LOADER_URL))()
-    end)
+    loadstring(game:HttpGet(LOADER_URL))()
 end
 
--- executor key
-if script_key and #script_key == 32 then
-    if runLoader(script_key) then
-        if writefile then
-            writefile(KEY_FILE, script_key)
-        end
-        return
-    end
+-- ✅ ONLY auto-load if key was validated before
+local savedKey = loadSavedKey()
+if savedKey and #savedKey == 32 then
+    runLoader(savedKey)
+    return
 end
 
--- saved key
-if isfile and isfile(KEY_FILE) then
-    local savedKey = string.gsub(readfile(KEY_FILE), "%s+", "")
-    if #savedKey == 32 then
-        if runLoader(savedKey) then
-            return
-        else
-            delfile(KEY_FILE)
-        end
-    else
-        delfile(KEY_FILE)
-    end
-end
-
--- UI (ONLY path left)
+-- 🪟 UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
@@ -85,15 +81,8 @@ KeyTab:CreateButton({
             return
         end
 
-        if runLoader(UserKey) then
-            writefile(KEY_FILE, UserKey)
-            Rayfield:Destroy()
-        else
-            Rayfield:Notify({
-                Title = "Invalid Key",
-                Content = "Restart game to retry key",
-                Duration = 4
-            })
-        end
+        -- ⚠️ Loader MAY kick here (cannot prevent)
+        saveKey(UserKey)
+        runLoader(UserKey)
     end
 })
