@@ -46,7 +46,7 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Verification")
 _G.LHub_UserKey = "" -- Using global for reliable access between UI elements
 
-Tab:CreateLabel("Please enter your 32-character key")
+
 
 Tab:CreateInput({
     Name = "Enter Key",
