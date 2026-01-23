@@ -37,7 +37,10 @@ local function tryLuarmor(key)
         return false
     end
 
+    -- expose key EVERYWHERE Luarmor might read from
+    script_key = key
     getgenv().script_key = key
+    _G.script_key = key
 
     local ok, api = pcall(function()
         return loadstring(game:HttpGet(LUARMOR_API_URL))()
@@ -47,9 +50,10 @@ local function tryLuarmor(key)
     end
 
     api.script_id = SCRIPT_ID
+    api.key = key -- IMPORTANT (new Luarmor SDK expects this)
 
     local success, status = pcall(function()
-        return api.check_key(key)
+        return api.check_key()
     end)
     if not success or not status then
         return false
