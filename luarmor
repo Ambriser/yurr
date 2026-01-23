@@ -3,89 +3,104 @@ local LOADER_URL = "https://raw.githubusercontent.com/Ambriser/yurr/refs/heads/m
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
--- unified loader
+-- Global variable cleanup for Luarmor compatibility
+getgenv().script_id = SCRIPT_ID
+
+-- Unified loader function
 local function tryLoad(key)
-    script_key = key
-    script_id = SCRIPT_ID
-
     _G.script_key = key
-    _G.script_id = SCRIPT_ID
-
     getgenv().script_key = key
-    getgenv().script_id = SCRIPT_ID
+    
+    -- Attempting to load the script
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(LOADER_URL))()
+    end)
 
-    -- delete first so invalid keys never persist
-    if isfile and delfile and isfile(KEY_FILE) then
-        delfile(KEY_FILE)
-    end
-
-    -- if key is invalid, Luarmor kicks here
-    loadstring(game:HttpGet(LOADER_URL))()
-
-    -- if we reach here, key is valid
-    if writefile then
-        writefile(KEY_FILE, key)
+    if success then
+        -- Only save the key if the load was successful
+        if writefile then
+            writefile(KEY_FILE, key)
+        end
+    else
+        -- If it failed, the key was likely invalid; remove the file
+        if isfile(KEY_FILE) then
+            delfile(KEY_FILE)
+        end
+        warn("L Hub: Verification failed. Key might be expired or invalid.")
     end
 end
 
--- auto-load saved key
+-- 1. Check if a valid key is already saved
 if isfile and isfile(KEY_FILE) then
-    local savedKey = readfile(KEY_FILE)
-    if savedKey and #savedKey == 32 then
-        tryLoad(savedKey)
+    local savedKey = readfile(KEY_FILE):gsub("%s+", "")
+    if #savedKey == 32 then
+        task.spawn(tryLoad, savedKey)
         return
     end
 end
 
--- script_key passed directly
-if script_key and #script_key == 32 then
-    tryLoad(script_key)
+-- 2. Check if script_key was passed globally (e.g., from an executor's auto-exec)
+if getgenv().script_key and #getgenv().script_key == 32 then
+    tryLoad(getgenv().script_key)
     return
 end
 
--- UI
+-- 3. Load UI if no valid key is found
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
     Name = "L Hub! Key System",
     LoadingTitle = "Key Required",
     LoadingSubtitle = "by L",
-    ToggleUIKeybind = "L",
+    ConfigurationSaving = {
+        Enabled = false
+    },
+    KeySystem = false -- We are using a custom tab instead
 })
 
-local Tab = Window:CreateTab("Key")
+local Tab = Window:CreateTab("Key Verification", 4483362458) -- Added an icon ID
 local UserKey = ""
 
 Tab:CreateButton({
-    Name = "Copy Key Link",
+    Name = "Get Key (Copy Link)",
     Callback = function()
         if setclipboard then
             setclipboard(GET_KEY_LINK)
+            Rayfield:Notify({
+                Title = "Link Copied",
+                Content = "The key link has been copied to your clipboard!",
+                Duration = 5
+            })
         end
     end
 })
 
 Tab:CreateInput({
     Name = "Enter Key",
-    PlaceholderText = "32-character key",
+    PlaceholderText = "Paste 32-character key here",
+    RemoveTextAfterFocusLost = false,
     Callback = function(text)
-        UserKey = (text or ""):gsub("%s+", "")
+        UserKey = text:gsub("%s+", "")
     end
 })
 
 Tab:CreateButton({
-    Name = "Verify Key",
+    Name = "Verify & Start",
     Callback = function()
-        if #UserKey ~= 32 then
+        if #UserKey == 32 then
             Rayfield:Notify({
-                Title = "Invalid Key",
-                Content = "Key must be 32 characters",
-                Duration = 3
+                Title = "Verifying",
+                Content = "Checking key with Luarmor servers...",
+                Duration = 2
             })
-            return
+            tryLoad(UserKey)
+            Rayfield:Destroy()
+        else
+            Rayfield:Notify({
+                Title = "Invalid Length",
+                Content = "Luarmor keys must be exactly 32 characters.",
+                Duration = 5
+            })
         end
-
-        tryLoad(UserKey)
-        Rayfield:Destroy()
     end
 })
