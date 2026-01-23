@@ -1,50 +1,43 @@
-
-
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
 local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
 local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
 
--- expose executor key everywhere Luarmor may read
-if script_key and #script_key == 32 then
-    _G.script_key = script_key
-    getgenv().script_key = script_key
+local function tryLoad(key)
+    script_key = key
+    _G.script_key = key
+    getgenv().script_key = key
 
     local ok = pcall(function()
         loadstring(game:HttpGet(LOADER_URL))()
     end)
 
-    if ok then
-        -- save key for next time
+    return ok
+end
+
+
+if script_key and #script_key == 32 then
+    if tryLoad(script_key) then
         if writefile then
             writefile(KEY_FILE, script_key)
         end
-        return -- STOP SCRIPT, HUB LOADED
+        return
     end
 end
-
 
 
 if isfile and isfile(KEY_FILE) then
     local savedKey = string.gsub(readfile(KEY_FILE), "%s+", "")
-
     if #savedKey == 32 then
-        script_key = savedKey
-        _G.script_key = savedKey
-        getgenv().script_key = savedKey
-
-        local ok = pcall(function()
-            loadstring(game:HttpGet(LOADER_URL))()
-        end)
-
-        if ok then
-            return -- STOP SCRIPT, HUB LOADED
+        if tryLoad(savedKey) then
+            return
         else
             delfile(KEY_FILE)
         end
+    else
+        delfile(KEY_FILE)
     end
 end
-
 
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -86,19 +79,13 @@ KeyTab:CreateButton({
             return
         end
 
-        -- expose key
-        script_key = UserKey
-        _G.script_key = UserKey
-        getgenv().script_key = UserKey
-
-        local ok = pcall(function()
-            loadstring(game:HttpGet(LOADER_URL))()
-        end)
-
-        if ok then
+        if tryLoad(UserKey) then
             writefile(KEY_FILE, UserKey)
             Rayfield:Destroy()
         else
+            if isfile and isfile(KEY_FILE) then
+                delfile(KEY_FILE)
+            end
             Rayfield:Notify({
                 Title = "Invalid Key",
                 Content = "Key verification failed",
