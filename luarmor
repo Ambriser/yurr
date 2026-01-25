@@ -1,25 +1,20 @@
--- RAYFIELD
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
 -- CONFIG
 local KEY_FILE = "LHub_Key.txt"
 local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
 local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
-
 -- UTILS
 local function trim(s)
     return (s or ""):match("^%s*(.-)%s*$")
 end
-
 -- SAFE FILE OPS
 local function canUseFiles()
     return typeof(isfile) == "function"
         and typeof(writefile) == "function"
         and typeof(readfile) == "function"
 end
-
 local function readKey()
     if not canUseFiles() then return nil end
     local ok, result = pcall(function()
@@ -29,17 +24,14 @@ local function readKey()
     end)
     return ok and result or nil
 end
-
 local function writeKey(key)
     key = trim(key)
     getgenv().script_key = key
-
     if not canUseFiles() then return end
     pcall(function()
         writefile(KEY_FILE, key)
     end)
 end
-
 local function deleteKey()
     if not canUseFiles() then return end
     pcall(function()
@@ -48,65 +40,58 @@ local function deleteKey()
         end
     end)
 end
-
 -- LUARMOR CHECK
 local function tryLuarmor(key)
     if not key or #key ~= 32 then
         return false
     end
-
     getgenv().script_key = key
-
     local ok, api = pcall(function()
         return loadstring(game:HttpGet(LUARMOR_API_URL))()
     end)
     if not ok or not api then
         return false
     end
-
     api.script_id = SCRIPT_ID
-
     local success, status = pcall(function()
         return api.check_key(key)
     end)
     if not success or not status then
         return false
     end
-
     if status.code == "KEY_VALID" then
         loadstring(game:HttpGet(LOADER_URL))()
         return true
     end
-
     return false
 end
-
 -- LOADER
 local function Load()
     local savedKey = readKey()
     if savedKey and tryLuarmor(savedKey) then
         return
     end
-
     deleteKey()
-
     local Window = Rayfield:CreateWindow({
         Name = "L Hub! Key Loader",
         LoadingTitle = "Enter Key",
         LoadingSubtitle = "by L",
-        ToggleUIKeybind = "L",
+        ToggleUIKeybind = Enum.KeyCode.L,
+        -- FIX: Disable config saving to prevent "Failed to create directory" error
+        ConfigurationSaving = {
+            Enabled = false
+        },
+        DisableBuildWarnings = true,
+        DisableRayfieldPrompts = true
     })
-
     local KeyTab = Window:CreateTab("Key System")
     local UserKey = ""
-
     KeyTab:CreateButton({
         Name = "Get Key",
         Callback = function()
             setclipboard(GET_KEY_LINK)
         end
     })
-
     KeyTab:CreateInput({
         Name = "Enter Key",
         PlaceholderText = "Paste your 32-char key here",
@@ -114,7 +99,6 @@ local function Load()
             UserKey = trim(text)
         end
     })
-
     KeyTab:CreateButton({
         Name = "Verify Key",
         Callback = function()
@@ -125,6 +109,5 @@ local function Load()
         end
     })
 end
-
 -- BOOT
 Load()
