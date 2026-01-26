@@ -1,104 +1,79 @@
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
--- CONFIG
-local KEY_FILE = "LHub_Key.txt"
-local LUARMOR_API_URL = "https://sdkapi-public.luarmor.net/library.lua"
 local SCRIPT_ID = "42f92b639d0394ac5806de25b07e26d5"
 local LOADER_URL = "https://api.luarmor.net/files/v4/loaders/42f92b639d0394ac5806de25b07e26d5.lua"
+local KEY_FILE = "LHub_Key.txt"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=-LnDzsGFTqXOu"
--- UTILS
-local function trim(s)
-    return (s or ""):match("^%s*(.-)%s*$")
+
+-- ❌ never auto-run saved keys
+if isfile and isfile(KEY_FILE) then
+    delfile(KEY_FILE)
 end
--- SAFE FILE OPS
-local function canUseFiles()
-    return typeof(isfile) == "function"
-        and typeof(writefile) == "function"
-        and typeof(readfile) == "function"
-end
-local function readKey()
-    if not canUseFiles() then return nil end
-    local ok, result = pcall(function()
-        if isfile(KEY_FILE) then
-            return trim(readfile(KEY_FILE))
-        end
-    end)
-    return ok and result or nil
-end
-local function writeKey(key)
-    key = trim(key)
+
+local function runLoader(key)
+    script_key = key
+    _G.script_key = key
     getgenv().script_key = key
-    if not canUseFiles() then return end
-    pcall(function()
-        writefile(KEY_FILE, key)
-    end)
+    loadstring(game:HttpGet(LOADER_URL))()
 end
-local function deleteKey()
-    if not canUseFiles() then return end
-    pcall(function()
-        if isfile(KEY_FILE) then
-            delfile(KEY_FILE)
-        end
-    end)
-end
--- LUARMOR CHECK
-local function tryLuarmor(key)
-    if not key or #key ~= 32 then
-        return false
-    end
-    getgenv().script_key = key
-    local ok, api = pcall(function()
-        return loadstring(game:HttpGet(LUARMOR_API_URL))()
-    end)
-    if not ok or not api then
-        return false
-    end
-    api.script_id = SCRIPT_ID
-    local success, status = pcall(function()
-        return api.check_key(key)
-    end)
-    if not success or not status then
-        return false
-    end
-    if status.code == "KEY_VALID" then
-        loadstring(game:HttpGet(LOADER_URL))()
-        return true
-    end
-    return false
-end
--- LOADER
-local function Load()
-    local savedKey = readKey()
-    if savedKey and tryLuarmor(savedKey) then
+
+-- ✅ AUTO-RUN IF script_key IS PROVIDED
+if script_key and type(script_key) == "string" then
+    local cleaned = string.gsub(script_key, "%s+", "")
+    if #cleaned == 32 then
+        -- ⚠️ if invalid, Luarmor will kick (cannot prevent)
+        runLoader(cleaned)
         return
     end
-    deleteKey()
-    local Window = Rayfield:CreateWindow({
-        Name = "L Hub! Key Loader",
-        LoadingTitle = "Enter Key",
-        LoadingSubtitle = "by L",
-        ToggleUIKeybind = Enum.KeyCode.L,
-        -- FIX: Disable config saving to prevent "Failed to create directory" error
-        ConfigurationSaving = {
-            Enabled = false
-        },
-        DisableBuildWarnings = true,
-        DisableRayfieldPrompts = true
-    })
-    local KeyTab = Window:CreateTab("Key System")
-    local UserKey = ""
-    KeyTab:CreateButton({
-        Name = "Get Key",
-        Callback = function()
-            setclipboard(GET_KEY_LINK)
+end
+
+-- 🪟 UI ONLY if no valid script_key was provided
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "L Hub! Key Loader",
+    LoadingTitle = "Enter Key",
+    LoadingSubtitle = "by L",
+    ToggleUIKeybind = "L",
+})
+
+local KeyTab = Window:CreateTab("Key System")
+local UserKey = ""
+
+KeyTab:CreateButton({
+    Name = "Copy Key Link",
+    Callback = function()
+        setclipboard(GET_KEY_LINK)
+    end
+})
+
+KeyTab:CreateInput({
+    Name = "Enter Key",
+    PlaceholderText = "Paste your 32-char key here",
+    Callback = function(text)
+        UserKey = string.gsub(text or "", "%s+", "")
+    end
+})
+
+KeyTab:CreateButton({
+    Name = "Verify Key",
+    Callback = function()
+        if #UserKey ~= 32 then
+            Rayfield:Notify({
+                Title = "Invalid Key",
+                Content = "Key must be 32 characters",
+                Duration = 3
+            })
+            return
         end
-    })
-    KeyTab:CreateInput({
-        Name = "Enter Key",
-        PlaceholderText = "Paste your 32-char key here",
-        Callback = function(text)
-            UserKey = trim(text)
+
+        -- ⚠️ invalid key = kick (Luarmor behavior)
+        runLoader(UserKey)
+
+        -- reached only if hub loads successfully
+        if writefile then
+            writefile(KEY_FILE, SCRIPT_ID .. "\n" .. UserKey)
         end
-    })
+    end
+})    })
     KeyTab:CreateButton({
         Name = "Verify Key",
         Callback = function()
