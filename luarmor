@@ -8,21 +8,35 @@ if isfile and isfile(KEY_FILE) then
     delfile(KEY_FILE)
 end
 
-local function runLoader(key)
+
+local function tryRunLoader(key)
     script_key = key
     _G.script_key = key
     getgenv().script_key = key
-    loadstring(game:HttpGet(LOADER_URL))()
+
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(LOADER_URL))()
+    end)
+
+    return success
 end
 
 
 if script_key and type(script_key) == "string" then
     local cleaned = string.gsub(script_key, "%s+", "")
     if #cleaned == 32 then
-        runLoader(cleaned)
-        return
+        if tryRunLoader(cleaned) then
+            return -- valid key, stop here
+        else
+            -- invalid key, wipe and continue to UI
+            if isfile and isfile(KEY_FILE) then
+                delfile(KEY_FILE)
+            end
+            script_key = nil
+        end
     end
 end
+
 
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -41,12 +55,17 @@ KeyTab:CreateButton({
     Name = "Copy Key Link",
     Callback = function()
         setclipboard(GET_KEY_LINK)
+        Rayfield:Notify({
+            Title = "Copied",
+            Content = "Key link copied to clipboard",
+            Duration = 3
+        })
     end
 })
 
 KeyTab:CreateInput({
     Name = "Enter Key",
-    PlaceholderText = "Paste your 32-char key here",
+    PlaceholderText = "Paste your 32-character key",
     Callback = function(text)
         UserKey = string.gsub(text or "", "%s+", "")
     end
@@ -58,13 +77,22 @@ KeyTab:CreateButton({
         if #UserKey ~= 32 then
             Rayfield:Notify({
                 Title = "Invalid Key",
-                Content = "Key must be 32 characters",
+                Content = "Key must be exactly 32 characters",
                 Duration = 3
             })
             return
         end
-        runLoader(UserKey)
 
+        local success = tryRunLoader(UserKey)
+
+        if not success then
+            Rayfield:Notify({
+                Title = "Invalid or Expired Key",
+                Content = "Please get a new key",
+                Duration = 4
+            })
+            return
+        end
 
         if writefile then
             writefile(KEY_FILE, SCRIPT_ID .. "\n" .. UserKey)
