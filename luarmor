@@ -26,9 +26,9 @@ if script_key and type(script_key) == "string" then
     local cleaned = string.gsub(script_key, "%s+", "")
     if #cleaned == 32 then
         if tryRunLoader(cleaned) then
-            return -- valid key, stop here
+            return
         else
-            -- invalid key, wipe and continue to UI
+
             if isfile and isfile(KEY_FILE) then
                 delfile(KEY_FILE)
             end
