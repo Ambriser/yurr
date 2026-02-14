@@ -569,7 +569,7 @@ end
 function p.New(r,u,v)
 local x=p.GetFromCache(r)
 
-for z,A in next,p.DefaultProperties[r]or{}do
+for z,A in next,(p.DefaultProperties and p.DefaultProperties[r])or{}do
 x[z]=A
 end
 
