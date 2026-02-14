@@ -118,6 +118,7 @@ local m
 local p={
 Font="rbxassetid://12187365364",
 Localization=nil,
+InstanceCache={},
 CanDraggable=true,
 Theme=nil,
 Themes=nil,
