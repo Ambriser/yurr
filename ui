@@ -75,7 +75,6 @@ local THEMES = {
 -- ============================================================
 local THEME_SAVE_PATH = "L Hub/Theme"
 
--- Serialize a theme table → plain text  "KEY=R,G,B\n..."
 local function SerializeTheme(t)
     local lines = {}
     for k, v in pairs(t) do
@@ -88,10 +87,9 @@ local function SerializeTheme(t)
     return table.concat(lines, "\n")
 end
 
--- Deserialize saved text → theme table (merges with Default for any missing keys)
 local function DeserializeTheme(text)
     local t = {}
-    for k, v in pairs(THEMES.Default) do t[k] = v end  -- fallback defaults
+    for k, v in pairs(THEMES.Default) do t[k] = v end
     for line in text:gmatch("[^\n]+") do
         local key, r, g, b = line:match("^(%w+)=(%d+),(%d+),(%d+)$")
         if key and r then
@@ -103,14 +101,12 @@ end
 
 local function SaveTheme(t)
     pcall(function()
-        -- Make sure the folder exists (writefile creates parent dirs on most executors)
         if not isfolder("L Hub") then makefolder("L Hub") end
         writefile(THEME_SAVE_PATH, SerializeTheme(t))
     end)
 end
 
 local function LoadSavedTheme()
-    -- Returns a theme table if a save file exists, otherwise nil
     local ok, data = pcall(readfile, THEME_SAVE_PATH)
     if ok and type(data) == "string" and #data > 0 then
         return DeserializeTheme(data)
@@ -118,11 +114,9 @@ local function LoadSavedTheme()
     return nil
 end
 
--- Try to load saved theme; fall back to Default
 local saved = LoadSavedTheme()
 local T = saved and saved or THEMES.Default
 
--- If we loaded a custom saved theme, register it so ApplyTheme can reference it
 if saved then
     THEMES["_Saved"] = saved
 end
@@ -206,6 +200,7 @@ OpenButton.TextSize         = 12
 OpenButton.Visible          = false
 OpenButton.ZIndex           = 10
 OpenButton.Active           = true
+-- NOTE: Draggable on OpenButton is fine since it's a standalone button
 OpenButton.Draggable        = true
 OpenButton.Parent           = ScreenGui
 Corner(OpenButton, UDim.new(1, 0))
@@ -236,8 +231,9 @@ MainFrame.Size                = UDim2.new(1, 0, 1, 0)
 MainFrame.BackgroundColor3    = T.BG_MAIN
 MainFrame.BorderSizePixel     = 0
 MainFrame.ClipsDescendants    = false
-MainFrame.Active              = true
-MainFrame.Draggable           = true
+-- REMOVED: MainFrame.Active = true / MainFrame.Draggable = true
+-- These caused MainFrame to move INSIDE MainGroup independently,
+-- conflicting with our custom drag that moves MainGroup itself.
 MainFrame.Parent              = MainGroup
 Corner(MainFrame, UDim.new(0, CORNER_R))
 local MainStroke = Stroke(MainFrame, Color3.fromRGB(45, 45, 70), 1.5)
@@ -355,27 +351,76 @@ local TSBPad            = Instance.new("UIPadding")
 TSBPad.PaddingLeft      = UDim.new(0, 8)
 TSBPad.Parent           = TitleSearchBox
 
--- Custom drag for desktop (mouse) only — touch/mobile uses Draggable on MainFrame
+-- ============================================================
+-- UNIFIED DRAG SYSTEM (mouse + touch, moves MainGroup)
+-- ============================================================
+-- We attach input to TitleBar so the drag handle is the titlebar.
+-- We never set Draggable=true on MainFrame to avoid position conflicts.
 do
-    local dragging, dragStart, startPos = false, nil, nil
-    TitleBar.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; dragStart = i.Position; startPos = MainGroup.Position
-        end
+    local dragging    = false
+    local dragInput   = nil   -- the specific input object we're tracking
+    local dragStart   = nil   -- Vector3 of the input position when drag began
+    local startPos    = nil   -- UDim2 position of MainGroup when drag began
+
+    local function IsDragInput(inputType)
+        return inputType == Enum.UserInputType.MouseButton1
+            or inputType == Enum.UserInputType.Touch
+    end
+    local function IsMovementInput(inputType)
+        return inputType == Enum.UserInputType.MouseMovement
+            or inputType == Enum.UserInputType.Touch
+    end
+
+    -- Start drag on TitleBar press, but NOT on buttons or the search box
+    TitleBar.InputBegan:Connect(function(input)
+        if not IsDragInput(input.UserInputType) then return end
+        -- Ignore if the input is on an interactive child (buttons, textbox)
+        -- We do this by checking if the focused object is something other than TitleBar
+        dragging  = true
+        dragInput = input
+        dragStart = input.Position
+        startPos  = MainGroup.Position
     end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - dragStart
-            MainGroup.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
+
+    -- Cancel drag if the button / textbox captures it (they sink the input)
+    CloseBtn.InputBegan:Connect(function(i)
+        if IsDragInput(i.UserInputType) then dragging = false end
     end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    MiniBtn.InputBegan:Connect(function(i)
+        if IsDragInput(i.UserInputType) then dragging = false end
+    end)
+    ThemeTitleBtn.InputBegan:Connect(function(i)
+        if IsDragInput(i.UserInputType) then dragging = false end
+    end)
+    TitleSearchBox.InputBegan:Connect(function(i)
+        if IsDragInput(i.UserInputType) then dragging = false end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if not IsMovementInput(input.UserInputType) then return end
+        -- For touch, only track the finger that started the drag
+        if input.UserInputType == Enum.UserInputType.Touch
+            and dragInput and input ~= dragInput then return end
+
+        local delta = input.Position - dragStart
+        MainGroup.Position = UDim2.new(
+            startPos.X.Scale,  startPos.X.Offset + delta.X,
+            startPos.Y.Scale,  startPos.Y.Offset + delta.Y
+        )
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if IsDragInput(input.UserInputType) then
+            dragging  = false
+            dragInput = nil
+        end
     end)
 end
 
+-- ============================================================
+-- RESIZE HANDLE
+-- ============================================================
 local ResizeHandle            = Instance.new("TextButton")
 ResizeHandle.Size             = UDim2.new(0, 22, 0, 22)
 ResizeHandle.Position         = UDim2.new(1, -22, 1, -22)
@@ -404,24 +449,29 @@ end
 do
     local resizing, resizeStart, startSize = false, nil, nil
     ResizeHandle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
             resizing = true; resizeStart = i.Position; startSize = MainGroup.Size
         end
     end)
     UserInputService.InputChanged:Connect(function(i)
-        if resizing and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - resizeStart
-            local newW = math.max(MIN_W, startSize.X.Offset + d.X)
-            local newH = math.max(MIN_H, startSize.Y.Offset + d.Y)
-            MainGroup.Size = UDim2.new(0, newW, 0, newH)
-            local scaleW = newW / DEFAULT_W
-            local scaleH = newH / DEFAULT_H
-            local s = math.min(scaleW, scaleH)
-            ApplyScale(s)
-        end
+        if not resizing then return end
+        if i.UserInputType ~= Enum.UserInputType.MouseMovement
+            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+        local d = i.Position - resizeStart
+        local newW = math.max(MIN_W, startSize.X.Offset + d.X)
+        local newH = math.max(MIN_H, startSize.Y.Offset + d.Y)
+        MainGroup.Size = UDim2.new(0, newW, 0, newH)
+        local scaleW = newW / DEFAULT_W
+        local scaleH = newH / DEFAULT_H
+        local s = math.min(scaleW, scaleH)
+        ApplyScale(s)
     end)
     UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then resizing = false end
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
     end)
 end
 
@@ -550,7 +600,7 @@ MiniBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- FONT SCALE (no settings popup - use Library API instead)
+-- FONT SCALE
 -- ============================================================
 local currentFontScale = 1.0
 local fontScaleListeners = {}
@@ -561,11 +611,10 @@ local function ApplyFontScale(s)
 end
 
 -- ============================================================
--- INLINE SEARCH DROPDOWN (attached to titlebar search box)
+-- INLINE SEARCH DROPDOWN
 -- ============================================================
 local allSearchItems = {}
 
--- Dropdown panel that appears below the titlebar search box
 local SearchDropdown              = Instance.new("Frame")
 SearchDropdown.Name               = "SearchDropdown"
 SearchDropdown.Size               = UDim2.new(0, 260, 0, 0)
@@ -696,13 +745,7 @@ NotifPad.PaddingRight               = UDim.new(0, 0)
 NotifPad.Parent                     = NotifContainer
 
 -- ============================================================
--- THEME BUTTON + FLOATING COLOR PICKER PANEL
--- ============================================================
--- ThemeTitleBtn is defined in the titlebar section above.
--- The panel opens downward from the top-right of the main frame.
-
--- ============================================================
--- FLOATING COLOR PICKER PANEL (outside the main UI)
+-- FLOATING COLOR PICKER PANEL
 -- ============================================================
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
@@ -712,13 +755,11 @@ ThemePanel.BorderSizePixel            = 0
 ThemePanel.Visible                    = false
 ThemePanel.ZIndex                     = 150
 ThemePanel.ClipsDescendants           = false
--- Parent to ScreenGui (not MainGroup) so it is never clipped by the CanvasGroup bounds
 ThemePanel.Parent                     = ScreenGui
 Corner(ThemePanel, UDim.new(0, 12))
 Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
 
--- Helper: reposition ThemePanel flush to the right of MainGroup
 local function SnapThemePanel()
     local p = MainGroup.Position
     local s = MainGroup.Size
@@ -727,7 +768,6 @@ local function SnapThemePanel()
         p.Y.Scale, p.Y.Offset)
 end
 
--- Auto-follow MainGroup whenever it moves or resizes
 MainGroup:GetPropertyChangedSignal("Position"):Connect(function()
     if ThemePanel.Visible then SnapThemePanel() end
 end)
@@ -735,7 +775,6 @@ MainGroup:GetPropertyChangedSignal("Size"):Connect(function()
     if ThemePanel.Visible then SnapThemePanel() end
 end)
 
--- Panel header
 local TPHeader                        = Instance.new("Frame")
 TPHeader.Size                         = UDim2.new(1, 0, 0, 44)
 TPHeader.BackgroundColor3             = T.BG_MAIN
@@ -776,7 +815,6 @@ TPTitle.ZIndex                        = 152
 TPTitle.Parent                        = TPHeader
 OnThemeChange(function(theme) TPTitle.TextColor3 = theme.TEXT_MAIN end)
 
--- Preset theme buttons row
 local PresetsBar                      = Instance.new("Frame")
 PresetsBar.Size                       = UDim2.new(1, -16, 0, 28)
 PresetsBar.Position                   = UDim2.new(0, 8, 0, 50)
@@ -813,7 +851,6 @@ for _, pname in ipairs(presetNames) do
     end)
 end
 
--- Divider
 local TPDiv                           = Instance.new("Frame")
 TPDiv.Size                            = UDim2.new(1, -16, 0, 1)
 TPDiv.Position                        = UDim2.new(0, 8, 0, 84)
@@ -822,7 +859,6 @@ TPDiv.BorderSizePixel                 = 0
 TPDiv.ZIndex                          = 151
 TPDiv.Parent                          = ThemePanel
 
--- Scroll area for color slots
 local TPScroll                        = Instance.new("ScrollingFrame")
 TPScroll.Size                         = UDim2.new(1, 0, 1, -90)
 TPScroll.Position                     = UDim2.new(0, 0, 0, 90)
@@ -849,7 +885,7 @@ TPScrollPad.PaddingBottom             = UDim.new(0, 6)
 TPScrollPad.Parent                    = TPScroll
 
 -- ============================================================
--- HSV COLOR PICKER WIDGET (shared, shown for one slot at a time)
+-- HSV COLOR PICKER WIDGET
 -- ============================================================
 local CPWidget                        = Instance.new("Frame")
 CPWidget.Name                         = "CPWidget"
@@ -864,7 +900,6 @@ Corner(CPWidget, UDim.new(0, 8))
 Stroke(CPWidget, Color3.fromRGB(50, 50, 80), 1)
 OnThemeChange(function(theme) CPWidget.BackgroundColor3 = theme.BG_MAIN end)
 
--- SV square (saturation x, value y)
 local SVSquare                        = Instance.new("Frame")
 SVSquare.Name                         = "SVSquare"
 SVSquare.Size                         = UDim2.new(1, -48, 1, -58)
@@ -875,7 +910,6 @@ SVSquare.BorderSizePixel              = 0
 SVSquare.Parent                       = CPWidget
 Corner(SVSquare, UDim.new(0, 6))
 
--- White gradient overlay (saturation) - white on left, transparent on right
 local SVGradW                         = Instance.new("UIGradient")
 SVGradW.Color                         = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
 SVGradW.Transparency                  = NumberSequence.new({
@@ -884,7 +918,6 @@ SVGradW.Transparency                  = NumberSequence.new({
 })
 SVGradW.Parent                        = SVSquare
 
--- Black gradient overlay (value) - transparent at top, black at bottom
 local SVGradBlack                     = Instance.new("Frame")
 SVGradBlack.Size                      = UDim2.new(1, 0, 1, 0)
 SVGradBlack.BackgroundColor3          = Color3.new(0,0,0)
@@ -902,7 +935,6 @@ SVGradB.Transparency                  = NumberSequence.new({
 SVGradB.Rotation                      = 90
 SVGradB.Parent                        = SVGradBlack
 
--- SV cursor
 local SVCursor                        = Instance.new("Frame")
 SVCursor.Size                         = UDim2.new(0, 12, 0, 12)
 SVCursor.AnchorPoint                  = Vector2.new(0.5, 0.5)
@@ -913,7 +945,6 @@ SVCursor.Parent                       = SVSquare
 Corner(SVCursor, UDim.new(1, 0))
 Stroke(SVCursor, Color3.new(0,0,0), 1.5)
 
--- SV interaction button
 local SVBtn                           = Instance.new("TextButton")
 SVBtn.Size                            = UDim2.new(1, 0, 1, 0)
 SVBtn.BackgroundTransparency          = 1
@@ -921,7 +952,6 @@ SVBtn.Text                            = ""
 SVBtn.ZIndex                          = 165
 SVBtn.Parent                          = SVSquare
 
--- Hue strip (vertical, right side)
 local HueStrip                        = Instance.new("Frame")
 HueStrip.Size                         = UDim2.new(0, 20, 1, -58)
 HueStrip.Position                     = UDim2.new(1, -34, 0, 8)
@@ -943,7 +973,6 @@ HueGrad.Color                         = ColorSequence.new({
 HueGrad.Rotation                      = 90
 HueGrad.Parent                        = HueStrip
 
--- Hue thumb
 local HueThumb                        = Instance.new("Frame")
 HueThumb.Size                         = UDim2.new(1, 4, 0, 6)
 HueThumb.AnchorPoint                  = Vector2.new(0.5, 0.5)
@@ -955,7 +984,6 @@ HueThumb.Parent                       = HueStrip
 Corner(HueThumb, UDim.new(0, 3))
 Stroke(HueThumb, Color3.new(0,0,0), 1)
 
--- Hue interaction button
 local HueBtn                          = Instance.new("TextButton")
 HueBtn.Size                           = UDim2.new(1, 0, 1, 0)
 HueBtn.BackgroundTransparency         = 1
@@ -963,7 +991,6 @@ HueBtn.Text                           = ""
 HueBtn.ZIndex                         = 165
 HueBtn.Parent                         = HueStrip
 
--- Hex input + preview row
 local CPBottom                        = Instance.new("Frame")
 CPBottom.Size                         = UDim2.new(1, -16, 0, 32)
 CPBottom.Position                     = UDim2.new(0, 8, 1, -40)
@@ -1001,10 +1028,9 @@ local CPHexPad                        = Instance.new("UIPadding")
 CPHexPad.PaddingLeft                  = UDim.new(0, 6)
 CPHexPad.Parent                       = CPHexBox
 
--- Internal state for the picker
 local cpHue, cpSat, cpVal = 0, 1, 1
-local cpActiveSlot        = nil  -- which color slot key is being edited
-local cpCallback          = nil  -- function(Color3) called when color changes
+local cpActiveSlot        = nil
+local cpCallback          = nil
 
 local function HexToColor3(hex)
     hex = hex:gsub("#", "")
@@ -1046,7 +1072,8 @@ local svDragging  = false
 local hueDragging = false
 
 SVBtn.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
         svDragging = true
         local mp  = Vector2.new(i.Position.X, i.Position.Y)
         local rel = mp - SVSquare.AbsolutePosition
@@ -1056,7 +1083,8 @@ SVBtn.InputBegan:Connect(function(i)
     end
 end)
 HueBtn.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
         hueDragging = true
         local mp  = Vector2.new(i.Position.X, i.Position.Y)
         local rel = mp - HueStrip.AbsolutePosition
@@ -1065,7 +1093,8 @@ HueBtn.InputBegan:Connect(function(i)
     end
 end)
 UserInputService.InputChanged:Connect(function(i)
-    if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+    if i.UserInputType ~= Enum.UserInputType.MouseMovement
+        and i.UserInputType ~= Enum.UserInputType.Touch then return end
     local mp = Vector2.new(i.Position.X, i.Position.Y)
     if svDragging then
         local rel = mp - SVSquare.AbsolutePosition
@@ -1080,7 +1109,8 @@ UserInputService.InputChanged:Connect(function(i)
     end
 end)
 UserInputService.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
         svDragging  = false
         hueDragging = false
     end
@@ -1091,7 +1121,6 @@ CPHexBox.FocusLost:Connect(function()
         cpHue, cpSat, cpVal = Color3.toHSV(c)
         UpdateCPVisuals()
     else
-        -- Restore valid hex
         CPHexBox.Text = Color3ToHex(Color3.fromHSV(cpHue, cpSat, cpVal))
     end
 end)
@@ -1113,9 +1142,8 @@ local colorSlots = {
     { key = "RED",         label = "Danger" },
 }
 
-local slotSwatches = {}  -- key -> Frame swatch
+local slotSwatches = {}
 
--- Custom theme table that starts as a copy of current T
 local function GetCustomTheme()
     local ct = {}
     for k, v in pairs(T) do ct[k] = v end
@@ -1153,7 +1181,6 @@ for i, slot in ipairs(colorSlots) do
     Stroke(swatch, Color3.fromRGB(60, 60, 100), 1)
     slotSwatches[slot.key] = swatch
 
-    -- Divider line (not after last)
     if i < #colorSlots then
         local div                     = Instance.new("Frame")
         div.Size                      = UDim2.new(1, 0, 0, 1)
@@ -1164,35 +1191,28 @@ for i, slot in ipairs(colorSlots) do
         div.Position                  = UDim2.new(0, 0, 1, -1)
     end
 
-    -- Open picker when swatch clicked
     local slotKey = slot.key
     swatch.MouseButton1Click:Connect(function()
-        -- Close if same slot already open
         if CPWidget.Visible and cpActiveSlot == slotKey then
             CPWidget.Visible = false
             return
         end
-        -- Anchor below the row inside the scroll
         local rowAbsY    = row.AbsolutePosition.Y
         local panelAbsY  = ThemePanel.AbsolutePosition.Y
         local anchorY    = rowAbsY - panelAbsY + 36
-        -- Clamp so picker doesn't go off bottom
         anchorY = math.clamp(anchorY, 90, ThemePanel.AbsoluteSize.Y - 235)
 
         OpenCPWidget(slotKey, customTheme[slotKey] or T[slotKey], function(newColor)
             customTheme[slotKey] = newColor
             swatch.BackgroundColor3 = newColor
-            -- Apply live to current theme
             T[slotKey] = newColor
             for _, fn in ipairs(themeListeners) do
                 pcall(fn, T)
             end
-            -- Persist the updated theme
             SaveTheme(T)
         end, anchorY)
     end)
 
-    -- Keep swatch color in sync with theme changes
     OnThemeChange(function(theme)
         if cpActiveSlot ~= slotKey then
             swatch.BackgroundColor3 = theme[slotKey] or swatch.BackgroundColor3
@@ -1206,7 +1226,6 @@ ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
         SnapThemePanel()
-        -- Slide in from slightly left
         local p = ThemePanel.Position
         ThemePanel.Position = UDim2.new(p.X.Scale, p.X.Offset - 6, p.Y.Scale, p.Y.Offset)
         ThemePanel.Visible  = true
@@ -1231,27 +1250,20 @@ end)
 -- ============================================================
 local Library = {}
 
--- Set the colour theme programmatically
--- Usage: Library:SetTheme("Midnight") -- or "Default", "Rose", "Light"
--- Or pass a custom table: Library:SetTheme({ACCENT=..., BG_MAIN=..., ...})
 function Library:SetTheme(nameOrTable)
     if type(nameOrTable) == "string" then
-        ApplyTheme(nameOrTable)  -- ApplyTheme already saves
+        ApplyTheme(nameOrTable)
         SetStatus("Theme: " .. nameOrTable)
     elseif type(nameOrTable) == "table" then
-        -- Merge with Default to fill any missing keys
         local merged = {}
         for k, v in pairs(THEMES.Default) do merged[k] = v end
         for k, v in pairs(nameOrTable) do merged[k] = v end
         THEMES["_Custom"] = merged
-        ApplyTheme("_Custom")   -- ApplyTheme already saves
+        ApplyTheme("_Custom")
         SetStatus("Custom theme applied")
     end
 end
 
--- Set window size programmatically
--- Usage: Library:SetSize(1.25) -- scale multiplier
--- Or: Library:SetSize("Large") -- "Small"=0.8, "Default"=1.0, "Large"=1.25, "XL"=1.5
 function Library:SetSize(scaleOrName)
     local presets = {Small=0.8, Default=1.0, Large=1.25, XL=1.5}
     local scale = type(scaleOrName) == "string" and (presets[scaleOrName] or 1.0) or (tonumber(scaleOrName) or 1.0)
@@ -1262,9 +1274,6 @@ function Library:SetSize(scaleOrName)
     SetStatus("Size: " .. tostring(scaleOrName))
 end
 
--- Show a notification toast
--- Usage:
---   Library:Notify({ Title="Hello", Content="World!", Duration=3, Icon="🔔" })
 function Library:Notify(cfg)
     cfg = cfg or {}
     local title    = cfg.Title    or "Notification"
@@ -1284,7 +1293,6 @@ function Library:Notify(cfg)
     Stroke(notif, Color3.fromRGB(55, 55, 85), 1)
     OnThemeChange(function(theme) notif.BackgroundColor3 = theme.BG_PANEL end)
 
-    -- Accent bar on left
     local Bar                       = Instance.new("Frame")
     Bar.Size                        = UDim2.new(0, 4, 1, -20)
     Bar.Position                    = UDim2.new(0, 8, 0, 10)
@@ -1365,7 +1373,6 @@ function Library:Notify(cfg)
         OnThemeChange(function(theme) contentLbl.TextColor3 = theme.TEXT_DIM end)
     end
 
-    -- Progress bar at bottom
     local ProgTrack                 = Instance.new("Frame")
     ProgTrack.Size                  = UDim2.new(1, -2, 0, 2)
     ProgTrack.Position              = UDim2.new(0, 1, 1, -3)
@@ -1384,14 +1391,10 @@ function Library:Notify(cfg)
     Corner(ProgFill, UDim.new(1, 0))
     OnThemeChange(function(theme) ProgFill.BackgroundColor3 = theme.ACCENT end)
 
-    -- Slide in
     notif.Position = UDim2.new(0, 20, 0, 0)
     Tween(notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.25)
-
-    -- Progress tween
     Tween(ProgFill, {Size = UDim2.new(0, 0, 1, 0)}, duration, Enum.EasingStyle.Linear)
 
-    -- Click to dismiss
     local dismissed = false
     local function Dismiss()
         if dismissed then return end
@@ -1843,17 +1846,22 @@ function Library:CreateWindow(cfg)
                     (x - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1))
             end
             SliderBtn.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                if i.UserInputType == Enum.UserInputType.MouseButton1
+                    or i.UserInputType == Enum.UserInputType.Touch then
                     dragging = true; UpdateFromX(i.Position.X)
                 end
             end)
             UserInputService.InputChanged:Connect(function(i)
-                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+                    or i.UserInputType == Enum.UserInputType.Touch) then
                     UpdateFromX(i.Position.X)
                 end
             end)
             UserInputService.InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+                if i.UserInputType == Enum.UserInputType.MouseButton1
+                    or i.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                end
             end)
 
             table.insert(allSearchItems, {
@@ -1939,7 +1947,6 @@ function Library:CreateWindow(cfg)
             local inputY    = hasDesc and 38 or 28
             local iconW     = hasIcon and 28 or 0
 
-            -- Optional icon label on the left of the box
             if hasIcon then
                 local IconLbl               = Instance.new("TextLabel")
                 IconLbl.Size                = UDim2.new(0, 24, 0, 22)
@@ -2002,47 +2009,23 @@ function Library:CreateWindow(cfg)
             })
 
             local ctrl = {}
-
-            function ctrl:Get()
-                return InputBox.Text
-            end
-
-            function ctrl:Set(v)
-                InputBox.Text = tostring(v or "")
-            end
-
-            function ctrl:GetPlaceholder()
-                return InputBox.PlaceholderText
-            end
-
-            function ctrl:SetPlaceholder(v)
-                InputBox.PlaceholderText = tostring(v or "")
-            end
-
-            function ctrl:Focus()
-                InputBox:CaptureFocus()
-            end
-
-            function ctrl:Blur()
-                InputBox:ReleaseFocus()
-            end
-
+            function ctrl:Get() return InputBox.Text end
+            function ctrl:Set(v) InputBox.Text = tostring(v or "") end
+            function ctrl:GetPlaceholder() return InputBox.PlaceholderText end
+            function ctrl:SetPlaceholder(v) InputBox.PlaceholderText = tostring(v or "") end
+            function ctrl:Focus() InputBox:CaptureFocus() end
+            function ctrl:Blur() InputBox:ReleaseFocus() end
             function ctrl:Lock()
                 InputBox.TextEditable    = false
                 InputBox.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
                 InputBox.TextColor3       = T.TEXT_DIM
             end
-
             function ctrl:Unlock()
                 InputBox.TextEditable    = true
                 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 34)
                 InputBox.TextColor3       = T.TEXT_MAIN
             end
-
-            function ctrl:OnChanged(fn)
-                table.insert(changedListeners, fn)
-            end
-
+            function ctrl:OnChanged(fn) table.insert(changedListeners, fn) end
             return ctrl
         end
 
@@ -2555,18 +2538,23 @@ function Library:CreateWindow(cfg)
                 trackBtn.Parent         = track
                 local draggingS = false
                 trackBtn.InputBegan:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if i.UserInputType == Enum.UserInputType.MouseButton1
+                        or i.UserInputType == Enum.UserInputType.Touch then
                         draggingS = true
                         SetVal(math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1))
                     end
                 end)
                 UserInputService.InputChanged:Connect(function(i)
-                    if draggingS and i.UserInputType == Enum.UserInputType.MouseMovement then
+                    if draggingS and (i.UserInputType == Enum.UserInputType.MouseMovement
+                        or i.UserInputType == Enum.UserInputType.Touch) then
                         SetVal(math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1))
                     end
                 end)
                 UserInputService.InputEnded:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseButton1 then draggingS = false end
+                    if i.UserInputType == Enum.UserInputType.MouseButton1
+                        or i.UserInputType == Enum.UserInputType.Touch then
+                        draggingS = false
+                    end
                 end)
                 valBox.FocusLost:Connect(function()
                     local n = tonumber(valBox.Text)
@@ -2613,7 +2601,8 @@ function Library:CreateWindow(cfg)
             end
 
             local function PickerInputEnded(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                if i.UserInputType == Enum.UserInputType.MouseButton1
+                    or i.UserInputType == Enum.UserInputType.Touch then
                     task.defer(UpdateColor)
                 end
             end
