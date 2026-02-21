@@ -1945,49 +1945,75 @@ function Library:CreateWindow(cfg)
         end
 
         function Tab:Input(cfg3)
-            local text     = cfg3.Title    or "Input"
-            local callback = cfg3.Callback
-            local isArea   = cfg3.Type     == "Textarea"
-            local hasDesc  = cfg3.Desc     ~= nil
-            local rowH     = isArea and 80 or (hasDesc and 62 or 52)
+            local text      = cfg3.Title       or "Input"
+            local callback  = cfg3.Callback
+            local isArea    = cfg3.Type        == "Textarea"
+            local hasDesc   = cfg3.Desc        ~= nil
+            local iconText  = cfg3.InputIcon   or ""
+            local hasIcon   = iconText ~= ""
+            local rowH      = isArea and 80 or (hasDesc and 62 or 52)
 
             local Row = MakeRow(rowH, NextOrder())
             MakeTitleLabel(Row, text, true, 20)
             if hasDesc then MakeDescLabel(Row, cfg3.Desc) end
 
-            local inputY            = hasDesc and 38 or 28
-            local InputBox          = Instance.new("TextBox")
-            InputBox.Size           = UDim2.new(1, -24, 0, isArea and 44 or 22)
-            InputBox.Position       = UDim2.new(0, 12, 0, inputY)
-            InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 34)
-            InputBox.PlaceholderText= cfg3.Placeholder or "Type here..."
-            InputBox.PlaceholderColor3 = T.TEXT_DIM
-            InputBox.Text           = cfg3.Value or ""
-            InputBox.TextColor3     = T.TEXT_MAIN
-            InputBox.Font           = Enum.Font.Gotham
-            InputBox.TextSize       = 12
-            InputBox.TextXAlignment = Enum.TextXAlignment.Left
-            InputBox.MultiLine      = isArea
-            InputBox.ClearTextOnFocus = false
-            InputBox.ZIndex         = 3
-            InputBox.Parent         = Row
+            local inputY    = hasDesc and 38 or 28
+            local iconW     = hasIcon and 28 or 0
+
+            -- Optional icon label on the left of the box
+            if hasIcon then
+                local IconLbl               = Instance.new("TextLabel")
+                IconLbl.Size                = UDim2.new(0, 24, 0, 22)
+                IconLbl.Position            = UDim2.new(0, 12, 0, inputY)
+                IconLbl.BackgroundTransparency = 1
+                IconLbl.Text                = iconText
+                IconLbl.TextColor3          = T.TEXT_DIM
+                IconLbl.Font                = Enum.Font.Gotham
+                IconLbl.TextSize            = 13
+                IconLbl.ZIndex              = 4
+                IconLbl.Parent              = Row
+                OnThemeChange(function(theme) IconLbl.TextColor3 = theme.TEXT_DIM end)
+            end
+
+            local InputBox              = Instance.new("TextBox")
+            InputBox.Size               = UDim2.new(1, -24 - iconW, 0, isArea and 44 or 22)
+            InputBox.Position           = UDim2.new(0, 12 + iconW, 0, inputY)
+            InputBox.BackgroundColor3   = Color3.fromRGB(20, 20, 34)
+            InputBox.PlaceholderText    = cfg3.Placeholder or "Type here..."
+            InputBox.PlaceholderColor3  = T.TEXT_DIM
+            InputBox.Text               = cfg3.Value or ""
+            InputBox.TextColor3         = T.TEXT_MAIN
+            InputBox.Font               = Enum.Font.Gotham
+            InputBox.TextSize           = 12
+            InputBox.TextXAlignment     = Enum.TextXAlignment.Left
+            InputBox.MultiLine          = isArea
+            InputBox.ClearTextOnFocus   = false
+            InputBox.ZIndex             = 3
+            InputBox.Parent             = Row
             Corner(InputBox, UDim.new(0, 5))
             Stroke(InputBox, Color3.fromRGB(48, 48, 75), 1)
             OnThemeChange(function(theme)
-                InputBox.TextColor3       = theme.TEXT_MAIN
-                InputBox.PlaceholderColor3= theme.TEXT_DIM
+                InputBox.TextColor3        = theme.TEXT_MAIN
+                InputBox.PlaceholderColor3 = theme.TEXT_DIM
             end)
             OnFontScaleChange(function(s) InputBox.TextSize = math.floor(12 * s) end)
 
-            local IP                = Instance.new("UIPadding")
-            IP.PaddingLeft          = UDim.new(0, 8)
-            IP.Parent               = InputBox
+            local IP            = Instance.new("UIPadding")
+            IP.PaddingLeft      = UDim.new(0, 8)
+            IP.Parent           = InputBox
 
-            InputBox.Focused:Connect(function() Tween(InputBox, {BackgroundColor3 = Color3.fromRGB(28, 28, 48)}, 0.1) end)
+            local changedListeners = {}
+
+            InputBox.Focused:Connect(function()
+                Tween(InputBox, {BackgroundColor3 = Color3.fromRGB(28, 28, 48)}, 0.1)
+            end)
             InputBox.FocusLost:Connect(function()
                 Tween(InputBox, {BackgroundColor3 = Color3.fromRGB(20, 20, 34)}, 0.1)
                 if callback then callback(InputBox.Text) end
                 SetStatus(text .. " updated")
+            end)
+            InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+                for _, fn in ipairs(changedListeners) do pcall(fn, InputBox.Text) end
             end)
 
             table.insert(allSearchItems, {
@@ -1997,8 +2023,56 @@ function Library:CreateWindow(cfg)
             })
 
             local ctrl = {}
-            function ctrl:Get() return InputBox.Text end
-            function ctrl:Set(v) InputBox.Text = v    end
+
+            -- Get current text value
+            function ctrl:Get()
+                return InputBox.Text
+            end
+
+            -- Set the text value
+            function ctrl:Set(v)
+                InputBox.Text = tostring(v or "")
+            end
+
+            -- Get the placeholder text
+            function ctrl:GetPlaceholder()
+                return InputBox.PlaceholderText
+            end
+
+            -- Set the placeholder text
+            function ctrl:SetPlaceholder(v)
+                InputBox.PlaceholderText = tostring(v or "")
+            end
+
+            -- Focus the input (bring cursor into the box)
+            function ctrl:Focus()
+                InputBox:CaptureFocus()
+            end
+
+            -- Remove focus from the input
+            function ctrl:Blur()
+                InputBox:ReleaseFocus()
+            end
+
+            -- Lock the input (read-only, dimmed)
+            function ctrl:Lock()
+                InputBox.TextEditable    = false
+                InputBox.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
+                InputBox.TextColor3       = T.TEXT_DIM
+            end
+
+            -- Unlock the input
+            function ctrl:Unlock()
+                InputBox.TextEditable    = true
+                InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 34)
+                InputBox.TextColor3       = T.TEXT_MAIN
+            end
+
+            -- Register a listener that fires on every keystroke (live changes)
+            function ctrl:OnChanged(fn)
+                table.insert(changedListeners, fn)
+            end
+
             return ctrl
         end
 
