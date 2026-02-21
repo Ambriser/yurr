@@ -727,17 +727,33 @@ NotifPad.Parent                     = NotifContainer
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
 ThemePanel.Size                       = UDim2.new(0, 280, 0, 440)
--- Sits to the right of MainGroup; since it's a child of MainGroup it moves with it automatically
-ThemePanel.Position                   = UDim2.new(1, 10, 0, 0)
 ThemePanel.BackgroundColor3           = T.BG_PANEL
 ThemePanel.BorderSizePixel            = 0
 ThemePanel.Visible                    = false
 ThemePanel.ZIndex                     = 150
 ThemePanel.ClipsDescendants           = false
-ThemePanel.Parent                     = MainGroup
+-- Parent to ScreenGui (not MainGroup) so it is never clipped by the CanvasGroup bounds
+ThemePanel.Parent                     = ScreenGui
 Corner(ThemePanel, UDim.new(0, 12))
 Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
+
+-- Helper: reposition ThemePanel flush to the right of MainGroup
+local function SnapThemePanel()
+    local p = MainGroup.Position
+    local s = MainGroup.Size
+    ThemePanel.Position = UDim2.new(
+        p.X.Scale, p.X.Offset + s.X.Offset + 10,
+        p.Y.Scale, p.Y.Offset)
+end
+
+-- Auto-follow MainGroup whenever it moves or resizes
+MainGroup:GetPropertyChangedSignal("Position"):Connect(function()
+    if ThemePanel.Visible then SnapThemePanel() end
+end)
+MainGroup:GetPropertyChangedSignal("Size"):Connect(function()
+    if ThemePanel.Visible then SnapThemePanel() end
+end)
 
 -- Panel header
 local TPHeader                        = Instance.new("Frame")
@@ -1205,18 +1221,25 @@ for i, slot in ipairs(colorSlots) do
     end)
 end
 
--- ThemePanel is a child of MainGroup so it moves automatically when MainGroup is dragged.
--- No sync logic needed — just show/hide with a small slide animation.
 local themePanelOpen = false
 ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
-        ThemePanel.Position = UDim2.new(1, 4, 0, 0)
+        SnapThemePanel()
+        -- Slide in from slightly left
+        local p = ThemePanel.Position
+        ThemePanel.Position = UDim2.new(p.X.Scale, p.X.Offset - 6, p.Y.Scale, p.Y.Offset)
         ThemePanel.Visible  = true
-        Tween(ThemePanel, {Position = UDim2.new(1, 10, 0, 0)}, 0.2)
+        SnapThemePanel()
+        Tween(ThemePanel, {Position = UDim2.new(
+            MainGroup.Position.X.Scale,
+            MainGroup.Position.X.Offset + MainGroup.Size.X.Offset + 10,
+            MainGroup.Position.Y.Scale,
+            MainGroup.Position.Y.Offset)}, 0.2)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
     else
-        Tween(ThemePanel, {Position = UDim2.new(1, 4, 0, 0)}, 0.15)
+        local p = ThemePanel.Position
+        Tween(ThemePanel, {Position = UDim2.new(p.X.Scale, p.X.Offset - 6, p.Y.Scale, p.Y.Offset)}, 0.15)
         task.delay(0.17, function() ThemePanel.Visible = false end)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15)
         CPWidget.Visible = false
