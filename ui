@@ -671,15 +671,15 @@ NotifPad.Parent                     = NotifContainer
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
 ThemePanel.Size                       = UDim2.new(0, 280, 0, 510)
--- Positioned at the top-right of MainFrame, just below the titlebar
-ThemePanel.Position                   = UDim2.new(1, -288, 0, 50)
+-- Sits beside the main UI to the right of MainGroup; position is updated dynamically on open
+ThemePanel.Position                   = UDim2.new(0.5, DEFAULT_W/2 + 10, 0.5, -255)
 ThemePanel.BackgroundColor3           = T.BG_PANEL
 ThemePanel.BorderSizePixel            = 0
 ThemePanel.Visible                    = false
 ThemePanel.ZIndex                     = 150
 ThemePanel.ClipsDescendants           = false
--- Parent to MainFrame so it sits on top of content but inside the window bounds
-ThemePanel.Parent                     = MainFrame
+-- Parent to ScreenGui so it is completely outside the main UI frame
+ThemePanel.Parent                     = ScreenGui
 Corner(ThemePanel, UDim.new(0, 12))
 Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
@@ -824,7 +824,7 @@ SVSquare.BorderSizePixel              = 0
 SVSquare.Parent                       = CPWidget
 Corner(SVSquare, UDim.new(0, 6))
 
--- White gradient overlay (saturation)
+-- White gradient overlay (saturation) - white on left, transparent on right
 local SVGradW                         = Instance.new("UIGradient")
 SVGradW.Color                         = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
 SVGradW.Transparency                  = NumberSequence.new({
@@ -833,11 +833,11 @@ SVGradW.Transparency                  = NumberSequence.new({
 })
 SVGradW.Parent                        = SVSquare
 
--- Black gradient overlay (value)
+-- Black gradient overlay (value) - transparent at top, black at bottom
 local SVGradBlack                     = Instance.new("Frame")
 SVGradBlack.Size                      = UDim2.new(1, 0, 1, 0)
 SVGradBlack.BackgroundColor3          = Color3.new(0,0,0)
-SVGradBlack.BackgroundTransparency    = 0
+SVGradBlack.BackgroundTransparency    = 1
 SVGradBlack.ZIndex                    = 162
 SVGradBlack.BorderSizePixel           = 0
 SVGradBlack.Parent                    = SVSquare
@@ -997,7 +997,8 @@ local hueDragging = false
 SVBtn.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then
         svDragging = true
-        local rel = i.Position - SVSquare.AbsolutePosition
+        local mp  = Vector2.new(i.Position.X, i.Position.Y)
+        local rel = mp - SVSquare.AbsolutePosition
         cpSat = math.clamp(rel.X / SVSquare.AbsoluteSize.X, 0, 1)
         cpVal = 1 - math.clamp(rel.Y / SVSquare.AbsoluteSize.Y, 0, 1)
         UpdateCPVisuals()
@@ -1006,21 +1007,23 @@ end)
 HueBtn.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then
         hueDragging = true
-        local rel = i.Position - HueStrip.AbsolutePosition
+        local mp  = Vector2.new(i.Position.X, i.Position.Y)
+        local rel = mp - HueStrip.AbsolutePosition
         cpHue = math.clamp(rel.Y / HueStrip.AbsoluteSize.Y, 0, 1)
         UpdateCPVisuals()
     end
 end)
 UserInputService.InputChanged:Connect(function(i)
     if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+    local mp = Vector2.new(i.Position.X, i.Position.Y)
     if svDragging then
-        local rel = i.Position - SVSquare.AbsolutePosition
+        local rel = mp - SVSquare.AbsolutePosition
         cpSat = math.clamp(rel.X / SVSquare.AbsoluteSize.X, 0, 1)
         cpVal = 1 - math.clamp(rel.Y / SVSquare.AbsoluteSize.Y, 0, 1)
         UpdateCPVisuals()
     end
     if hueDragging then
-        local rel = i.Position - HueStrip.AbsolutePosition
+        local rel = mp - HueStrip.AbsolutePosition
         cpHue = math.clamp(rel.Y / HueStrip.AbsoluteSize.Y, 0, 1)
         UpdateCPVisuals()
     end
@@ -1150,12 +1153,18 @@ local themePanelOpen = false
 ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
-        ThemePanel.Position = UDim2.new(1, -288, 0, 44)
+        -- Snap ThemePanel to the right of MainGroup, aligned to its top
+        local mgPos  = MainGroup.AbsolutePosition
+        local mgSize = MainGroup.AbsoluteSize
+        -- Start slightly offset for slide-in animation
+        ThemePanel.Position = UDim2.new(0, mgPos.X + mgSize.X + 6, 0, mgPos.Y)
         ThemePanel.Visible  = true
-        Tween(ThemePanel, {Position = UDim2.new(1, -288, 0, 50)}, 0.2)
+        Tween(ThemePanel, {Position = UDim2.new(0, mgPos.X + mgSize.X + 10, 0, mgPos.Y)}, 0.2)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
     else
-        Tween(ThemePanel, {Position = UDim2.new(1, -288, 0, 44)}, 0.15)
+        local mgPos  = MainGroup.AbsolutePosition
+        local mgSize = MainGroup.AbsoluteSize
+        Tween(ThemePanel, {Position = UDim2.new(0, mgPos.X + mgSize.X + 6, 0, mgPos.Y)}, 0.15)
         task.delay(0.17, function() ThemePanel.Visible = false end)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15)
         CPWidget.Visible = false
