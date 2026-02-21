@@ -376,11 +376,6 @@ local TSBPad            = Instance.new("UIPadding")
 TSBPad.PaddingLeft      = UDim.new(0, 8)
 TSBPad.Parent           = TitleSearchBox
 
--- These are forward-declared so the drag/resize blocks (defined before ThemePanel)
--- can call them. The real bodies are assigned after ThemePanel is created below.
-local themePanelOpen   = false
-local SyncThemePanel   = function() end   -- stub; filled in after ThemePanel exists
-
 do
     local dragging, dragStart, startPos = false, nil, nil
     TitleBar.InputBegan:Connect(function(i)
@@ -394,7 +389,6 @@ do
             MainGroup.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + d.X,
                 startPos.Y.Scale, startPos.Y.Offset + d.Y)
-            SyncThemePanel()
         end
     end)
     UserInputService.InputEnded:Connect(function(i)
@@ -444,7 +438,6 @@ do
             local scaleH = newH / DEFAULT_H
             local s = math.min(scaleW, scaleH)
             ApplyScale(s)
-            SyncThemePanel()
         end
     end)
     UserInputService.InputEnded:Connect(function(i)
@@ -733,16 +726,15 @@ NotifPad.Parent                     = NotifContainer
 -- ============================================================
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
-ThemePanel.Size                       = UDim2.new(0, 280, 0, 510)
--- Sits beside the main UI to the right of MainGroup; position is updated dynamically on open
-ThemePanel.Position                   = UDim2.new(0.5, DEFAULT_W/2 + 10, 0.5, -255)
+ThemePanel.Size                       = UDim2.new(0, 280, 0, 440)
+-- Sits to the right of MainGroup; since it's a child of MainGroup it moves with it automatically
+ThemePanel.Position                   = UDim2.new(1, 10, 0, 0)
 ThemePanel.BackgroundColor3           = T.BG_PANEL
 ThemePanel.BorderSizePixel            = 0
 ThemePanel.Visible                    = false
 ThemePanel.ZIndex                     = 150
 ThemePanel.ClipsDescendants           = false
--- Parent to ScreenGui so it is completely outside the main UI frame
-ThemePanel.Parent                     = ScreenGui
+ThemePanel.Parent                     = MainGroup
 Corner(ThemePanel, UDim.new(0, 12))
 Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
@@ -1213,60 +1205,18 @@ for i, slot in ipairs(colorSlots) do
     end)
 end
 
--- Fill in the real SyncThemePanel body now that ThemePanel exists.
--- Computes position purely from MainGroup.Position offsets — no AbsolutePosition lag.
-SyncThemePanel = function()
-    if not themePanelOpen then return end
-    local mgX = MainGroup.Position.X.Offset
-    local mgY = MainGroup.Position.Y.Offset
-    local mgW = MainGroup.Size.X.Offset
-    ThemePanel.Position = UDim2.new(0, mgX + mgW + 10, 0, mgY)
-end
-
--- Make ThemePanel header draggable — dragging it moves MainGroup too so they stay glued
-do
-    local tpDragging, tpDragStart, tpStartMG = false, nil, nil
-    TPHeader.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            tpDragging = true
-            tpDragStart = i.Position
-            tpStartMG   = MainGroup.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if tpDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - tpDragStart
-            MainGroup.Position = UDim2.new(
-                tpStartMG.X.Scale, tpStartMG.X.Offset + d.X,
-                tpStartMG.Y.Scale, tpStartMG.Y.Offset + d.Y)
-            SyncThemePanel()
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then tpDragging = false end
-    end)
-end
-
--- Toggle the theme panel (triggered by ThemeTitleBtn in the titlebar)
+-- ThemePanel is a child of MainGroup so it moves automatically when MainGroup is dragged.
+-- No sync logic needed — just show/hide with a small slide animation.
+local themePanelOpen = false
 ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
-        SyncThemePanel()
-        -- Nudge left a bit for slide-in effect
-        local startX = ThemePanel.Position.X.Offset - 6
-        ThemePanel.Position = UDim2.new(0, startX, ThemePanel.Position.Y.Scale, ThemePanel.Position.Y.Offset)
+        ThemePanel.Position = UDim2.new(1, 4, 0, 0)
         ThemePanel.Visible  = true
-        SyncThemePanel()  -- immediately correct position via tween target
-        local mgX = MainGroup.Position.X.Offset
-        local mgY = MainGroup.Position.Y.Offset
-        local mgW = MainGroup.Size.X.Offset
-        Tween(ThemePanel, {Position = UDim2.new(0, mgX + mgW + 10, 0, mgY)}, 0.2)
+        Tween(ThemePanel, {Position = UDim2.new(1, 10, 0, 0)}, 0.2)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
     else
-        local mgX = MainGroup.Position.X.Offset
-        local mgY = MainGroup.Position.Y.Offset
-        local mgW = MainGroup.Size.X.Offset
-        Tween(ThemePanel, {Position = UDim2.new(0, mgX + mgW + 4, 0, mgY)}, 0.15)
+        Tween(ThemePanel, {Position = UDim2.new(1, 4, 0, 0)}, 0.15)
         task.delay(0.17, function() ThemePanel.Visible = false end)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15)
         CPWidget.Visible = false
