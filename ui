@@ -205,6 +205,8 @@ OpenButton.Font             = Enum.Font.GothamBold
 OpenButton.TextSize         = 12
 OpenButton.Visible          = false
 OpenButton.ZIndex           = 10
+OpenButton.Active           = true
+OpenButton.Draggable        = true
 OpenButton.Parent           = ScreenGui
 Corner(OpenButton, UDim.new(1, 0))
 Stroke(OpenButton, Color3.fromRGB(120, 120, 255), 1)
@@ -213,33 +215,11 @@ OnThemeChange(function(theme)
     OpenButton.BackgroundColor3 = theme.ACCENT
 end)
 
-do
-    local drag, dragStart, startPos, moved = false, nil, nil, false
-    OpenButton.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = true; moved = false; dragStart = i.Position; startPos = OpenButton.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - dragStart
-            if d.Magnitude > 4 then moved = true end
-            OpenButton.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
-    end)
-    OpenButton.MouseButton1Click:Connect(function()
-        if not moved then
-            OpenButton.Visible = false
-            local cg = ScreenGui:FindFirstChild("MainGroup")
-            if cg then FadeIn(cg, 0.2) end
-        end
-    end)
-end
+OpenButton.MouseButton1Click:Connect(function()
+    OpenButton.Visible = false
+    local cg = ScreenGui:FindFirstChild("MainGroup")
+    if cg then FadeIn(cg, 0.2) end
+end)
 
 local MainGroup                  = Instance.new("CanvasGroup")
 MainGroup.Name                   = "MainGroup"
@@ -256,6 +236,8 @@ MainFrame.Size                = UDim2.new(1, 0, 1, 0)
 MainFrame.BackgroundColor3    = T.BG_MAIN
 MainFrame.BorderSizePixel     = 0
 MainFrame.ClipsDescendants    = false
+MainFrame.Active              = true
+MainFrame.Draggable           = true
 MainFrame.Parent              = MainGroup
 Corner(MainFrame, UDim.new(0, CORNER_R))
 local MainStroke = Stroke(MainFrame, Color3.fromRGB(45, 45, 70), 1.5)
@@ -350,9 +332,6 @@ end)
 -- INLINE SEARCH BOX IN TITLEBAR
 -- ============================================================
 local TitleSearchBox              = Instance.new("TextBox")
--- Search stretches from after the title/version area to just before THM button
--- Title dot+label ~ 30px, version badge ~ 210px end. Right buttons: X(-38) Mini(-72) THM(-108) → rightmost at -120
--- So search goes from ~210 offset left to -122 right edge = lots of room
 TitleSearchBox.Size               = UDim2.new(1, -340, 0, 26)
 TitleSearchBox.Position           = UDim2.new(0, 210, 0.5, -13)
 TitleSearchBox.BackgroundColor3   = T.BG_ELEMENT
@@ -376,6 +355,7 @@ local TSBPad            = Instance.new("UIPadding")
 TSBPad.PaddingLeft      = UDim.new(0, 8)
 TSBPad.Parent           = TitleSearchBox
 
+-- Custom drag for desktop (mouse) only — touch/mobile uses Draggable on MainFrame
 do
     local dragging, dragStart, startPos = false, nil, nil
     TitleBar.InputBegan:Connect(function(i)
@@ -700,8 +680,8 @@ end)
 -- ============================================================
 local NotifContainer                = Instance.new("Frame")
 NotifContainer.Name                 = "NotifContainer"
-NotifContainer.Size                 = UDim2.new(0, 300, 1, 0)
-NotifContainer.Position             = UDim2.new(1, -310, 0, 0)
+NotifContainer.Size                 = UDim2.new(0, 340, 1, 0)
+NotifContainer.Position             = UDim2.new(1, -350, 0, 0)
 NotifContainer.BackgroundTransparency = 1
 NotifContainer.ZIndex               = 200
 NotifContainer.Parent               = ScreenGui
@@ -1306,8 +1286,8 @@ function Library:Notify(cfg)
 
     -- Accent bar on left
     local Bar                       = Instance.new("Frame")
-    Bar.Size                        = UDim2.new(0, 3, 1, -16)
-    Bar.Position                    = UDim2.new(0, 8, 0, 8)
+    Bar.Size                        = UDim2.new(0, 4, 1, -20)
+    Bar.Position                    = UDim2.new(0, 8, 0, 10)
     Bar.BackgroundColor3            = T.ACCENT
     Bar.BorderSizePixel             = 0
     Bar.ZIndex                      = 202
@@ -1377,7 +1357,7 @@ function Library:Notify(cfg)
         contentLbl.Text             = content
         contentLbl.TextColor3       = T.TEXT_DIM
         contentLbl.Font             = Enum.Font.Gotham
-        contentLbl.TextSize         = 11
+        contentLbl.TextSize         = 13
         contentLbl.TextXAlignment   = Enum.TextXAlignment.Left
         contentLbl.TextWrapped      = true
         contentLbl.ZIndex           = 203
@@ -1412,12 +1392,11 @@ function Library:Notify(cfg)
     Tween(ProgFill, {Size = UDim2.new(0, 0, 1, 0)}, duration, Enum.EasingStyle.Linear)
 
     -- Click to dismiss
-    local closeConn
     local dismissed = false
     local function Dismiss()
         if dismissed then return end
         dismissed = true
-        Tween(notif, {Position = UDim2.new(0, 320, 0, 0)}, 0.2)
+        Tween(notif, {Position = UDim2.new(0, 340, 0, 0)}, 0.2)
         task.delay(0.22, function() notif:Destroy() end)
     end
     notif.InputBegan:Connect(function(i)
@@ -2024,51 +2003,42 @@ function Library:CreateWindow(cfg)
 
             local ctrl = {}
 
-            -- Get current text value
             function ctrl:Get()
                 return InputBox.Text
             end
 
-            -- Set the text value
             function ctrl:Set(v)
                 InputBox.Text = tostring(v or "")
             end
 
-            -- Get the placeholder text
             function ctrl:GetPlaceholder()
                 return InputBox.PlaceholderText
             end
 
-            -- Set the placeholder text
             function ctrl:SetPlaceholder(v)
                 InputBox.PlaceholderText = tostring(v or "")
             end
 
-            -- Focus the input (bring cursor into the box)
             function ctrl:Focus()
                 InputBox:CaptureFocus()
             end
 
-            -- Remove focus from the input
             function ctrl:Blur()
                 InputBox:ReleaseFocus()
             end
 
-            -- Lock the input (read-only, dimmed)
             function ctrl:Lock()
                 InputBox.TextEditable    = false
                 InputBox.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
                 InputBox.TextColor3       = T.TEXT_DIM
             end
 
-            -- Unlock the input
             function ctrl:Unlock()
                 InputBox.TextEditable    = true
                 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 34)
                 InputBox.TextColor3       = T.TEXT_MAIN
             end
 
-            -- Register a listener that fires on every keystroke (live changes)
             function ctrl:OnChanged(fn)
                 table.insert(changedListeners, fn)
             end
@@ -2456,20 +2426,6 @@ function Library:CreateWindow(cfg)
             return ctrl
         end
 
-        -- -------------------------------------------------------
-        -- COLORPICKER
-        -- -------------------------------------------------------
-        -- Usage:
-        --   local cp = Tab:Colorpicker({
-        --     Title = "Background Color",
-        --     Desc  = "Pick a color",
-        --     Default = Color3.fromRGB(0, 255, 0),
-        --     Transparency = 0,   -- 0-1, optional
-        --     Locked = false,
-        --     Callback = function(color, transparency) end
-        --   })
-        --   cp:Set(Color3.fromRGB(255,0,0))
-        --   cp:Get()  --> Color3
         function Tab:Colorpicker(cfg3)
             local text     = cfg3.Title        or "Colorpicker"
             local callback = cfg3.Callback
@@ -2484,7 +2440,6 @@ function Library:CreateWindow(cfg)
             MakeTitleLabel(Row, text, hasDesc, 80)
             if hasDesc then MakeDescLabel(Row, cfg3.Desc) end
 
-            -- Swatch button
             local Swatch                    = Instance.new("TextButton")
             Swatch.Size                     = UDim2.new(0, 54, 0, 24)
             Swatch.Position                 = UDim2.new(1, -62, 0.5, -12)
@@ -2495,7 +2450,6 @@ function Library:CreateWindow(cfg)
             Corner(Swatch, UDim.new(0, 5))
             Stroke(Swatch, Color3.fromRGB(60, 60, 100), 1)
 
-            -- Checkerboard overlay for transparency hint
             local CheckerA                  = Instance.new("UIGradient")
             CheckerA.Color                  = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
@@ -2506,7 +2460,6 @@ function Library:CreateWindow(cfg)
 
             local pickerOpen = false
 
-            -- Picker popup
             local Popup                     = Instance.new("Frame")
             Popup.Size                      = UDim2.new(0, 220, 0, 0)
             Popup.Position                  = UDim2.new(1, -224, 1, 6)
@@ -2532,7 +2485,6 @@ function Library:CreateWindow(cfg)
             PopLayout.Padding               = UDim.new(0, 8)
             PopLayout.Parent                = Popup
 
-            -- Hue / Saturation / Value sliders
             local function MakeSlider(labelTxt, defaultVal)
                 local wrap              = Instance.new("Frame")
                 wrap.Size               = UDim2.new(1, 0, 0, 36)
@@ -2626,7 +2578,6 @@ function Library:CreateWindow(cfg)
                 }
             end
 
-            -- Decompose current color to R,G,B 0-1
             local r0 = current.R
             local g0 = current.G
             local b0 = current.B
@@ -2635,13 +2586,11 @@ function Library:CreateWindow(cfg)
             local sliderG = MakeSlider("G", g0)
             local sliderB = MakeSlider("B", b0)
 
-            -- Transparency slider (only if Transparency was provided)
             local sliderA
             if cfg3.Transparency ~= nil then
                 sliderA = MakeSlider("A", alpha)
             end
 
-            -- Preview swatch in popup
             local PreviewSwatch             = Instance.new("Frame")
             PreviewSwatch.Size              = UDim2.new(1, 0, 0, 20)
             PreviewSwatch.BackgroundColor3  = current
@@ -2663,28 +2612,12 @@ function Library:CreateWindow(cfg)
                 SetStatus(text .. " updated")
             end
 
-            -- Wire up slider callbacks to UpdateColor
-            -- We'll patch the trackBtn InputEnded and valBox FocusLost via a simple approach:
-            -- Re-connect after creation by monkey-patching the setval calls.
-            -- Instead, re-create sliders with callback wired in.
-            -- (Sliders above already call SetVal; we connect via UserInputService.InputEnded on each)
-            -- Simpler: poll via InputEnded on the whole popup area
-            local function WireUpdate(slider)
-                -- Not straightforward to intercept the closure, so we use a changed signal approach
-                -- We'll just fire UpdateColor on every UserInputService.InputEnded inside popup
-            end
-
-            -- Use a single global connect per picker that fires update on mouse release or FocusLost
             local function PickerInputEnded(i)
                 if i.UserInputType == Enum.UserInputType.MouseButton1 then
                     task.defer(UpdateColor)
                 end
             end
             Popup.InputEnded:Connect(PickerInputEnded)
-            -- Also fire on each valBox FocusLost (already handled by sliders' valBox.FocusLost which calls SetVal,
-            -- but doesn't call UpdateColor; add a secondary connection via a small wrapper)
-            -- The simplest fix: after each slider's trackBtn InputEnded fires UpdateColor too.
-            -- This is taken care of by Popup.InputEnded which covers all children.
 
             if not locked then
                 Swatch.MouseButton1Click:Connect(function()
@@ -2696,7 +2629,6 @@ function Library:CreateWindow(cfg)
                 end)
             end
 
-            -- Close when clicking outside
             UserInputService.InputBegan:Connect(function(i)
                 if pickerOpen and i.UserInputType == Enum.UserInputType.MouseButton1 then
                     task.delay(0.02, function()
