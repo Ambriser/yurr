@@ -1320,6 +1320,7 @@ function Library:Notify(cfg)
     padding.PaddingRight            = UDim.new(0, 16)
     padding.PaddingTop              = UDim.new(0, 14)
     padding.PaddingBottom           = UDim.new(0, 14)
+    padding.Parent                  = notif
 
     local inner                     = Instance.new("Frame")
     inner.Size                      = UDim2.new(1, 0, 0, 0)
