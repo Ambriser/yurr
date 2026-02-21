@@ -283,17 +283,22 @@ end
 
 local CloseBtn   = MakeWindowBtn(-38, Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(240, 80, 80))
 local MiniBtn    = MakeWindowBtn(-72, Color3.fromRGB(40, 40, 60),  "-", Color3.fromRGB(55, 55, 80))
+local ThemeTitleBtn = MakeWindowBtn(-108, Color3.fromRGB(40, 40, 60), "🎨", Color3.fromRGB(55, 55, 80))
 
 OnThemeChange(function(theme)
-    MiniBtn.BackgroundColor3 = theme.BG_ELEMENT
+    MiniBtn.BackgroundColor3       = theme.BG_ELEMENT
+    ThemeTitleBtn.BackgroundColor3 = theme.BG_ELEMENT
 end)
 
 -- ============================================================
 -- INLINE SEARCH BOX IN TITLEBAR
 -- ============================================================
 local TitleSearchBox              = Instance.new("TextBox")
-TitleSearchBox.Size               = UDim2.new(0, 160, 0, 26)
-TitleSearchBox.Position           = UDim2.new(1, -250, 0.5, -13)
+-- Search stretches from after the title/version area to just before THM button
+-- Title dot+label ~ 30px, version badge ~ 210px end. Right buttons: X(-38) Mini(-72) THM(-108) → rightmost at -120
+-- So search goes from ~210 offset left to -122 right edge = lots of room
+TitleSearchBox.Size               = UDim2.new(1, -340, 0, 26)
+TitleSearchBox.Position           = UDim2.new(0, 210, 0.5, -13)
 TitleSearchBox.BackgroundColor3   = T.BG_ELEMENT
 TitleSearchBox.PlaceholderText    = "Search..."
 TitleSearchBox.PlaceholderColor3  = T.TEXT_DIM
@@ -657,64 +662,24 @@ NotifPad.Parent                     = NotifContainer
 -- ============================================================
 -- THEME BUTTON + FLOATING COLOR PICKER PANEL
 -- ============================================================
-
--- Small pill button attached to the right edge of MainGroup
-local ThemeToggleBtn                  = Instance.new("TextButton")
-ThemeToggleBtn.Name                   = "ThemeToggleBtn"
-ThemeToggleBtn.Size                   = UDim2.new(0, 32, 0, 78)
-ThemeToggleBtn.Position               = UDim2.new(1, 6, 0.5, -39)
-ThemeToggleBtn.BackgroundColor3       = T.BG_PANEL
-ThemeToggleBtn.Text                   = ""
-ThemeToggleBtn.ZIndex                 = 20
-ThemeToggleBtn.Parent                 = MainGroup
-Corner(ThemeToggleBtn, UDim.new(0, 8))
-Stroke(ThemeToggleBtn, Color3.fromRGB(55, 55, 85), 1)
-OnThemeChange(function(theme) ThemeToggleBtn.BackgroundColor3 = theme.BG_PANEL end)
-
--- Icon stack inside the button
-local TTBIcon1                        = Instance.new("TextLabel")
-TTBIcon1.Size                         = UDim2.new(1, 0, 0, 18)
-TTBIcon1.Position                     = UDim2.new(0, 0, 0, 10)
-TTBIcon1.BackgroundTransparency       = 1
-TTBIcon1.Text                         = "🎨"
-TTBIcon1.Font                         = Enum.Font.Gotham
-TTBIcon1.TextSize                     = 14
-TTBIcon1.ZIndex                       = 21
-TTBIcon1.Parent                       = ThemeToggleBtn
-
-local TTBLabel                        = Instance.new("TextLabel")
-TTBLabel.Size                         = UDim2.new(1, 0, 0, 36)
-TTBLabel.Position                     = UDim2.new(0, 0, 0, 30)
-TTBLabel.BackgroundTransparency       = 1
-TTBLabel.Text                         = "T\nH\nM"
-TTBLabel.Font                         = Enum.Font.GothamBold
-TTBLabel.TextSize                     = 9
-TTBLabel.TextColor3                   = T.TEXT_DIM
-TTBLabel.ZIndex                       = 21
-TTBLabel.Parent                       = ThemeToggleBtn
-OnThemeChange(function(theme) TTBLabel.TextColor3 = theme.TEXT_DIM end)
-
--- Hover effects
-ThemeToggleBtn.MouseEnter:Connect(function()
-    Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_HOVER}, 0.12)
-end)
-ThemeToggleBtn.MouseLeave:Connect(function()
-    Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_PANEL}, 0.15)
-end)
+-- ThemeTitleBtn is defined in the titlebar section above.
+-- The panel opens downward from the top-right of the main frame.
 
 -- ============================================================
 -- FLOATING COLOR PICKER PANEL (outside the main UI)
 -- ============================================================
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
-ThemePanel.Size                       = UDim2.new(0, 280, 0, 520)
-ThemePanel.Position                   = UDim2.new(1, 46, 0.5, -260)
+ThemePanel.Size                       = UDim2.new(0, 280, 0, 510)
+-- Positioned at the top-right of MainFrame, just below the titlebar
+ThemePanel.Position                   = UDim2.new(1, -288, 0, 50)
 ThemePanel.BackgroundColor3           = T.BG_PANEL
 ThemePanel.BorderSizePixel            = 0
 ThemePanel.Visible                    = false
 ThemePanel.ZIndex                     = 150
-ThemePanel.ClipsDescendants           = true
-ThemePanel.Parent                     = MainGroup
+ThemePanel.ClipsDescendants           = false
+-- Parent to MainFrame so it sits on top of content but inside the window bounds
+ThemePanel.Parent                     = MainFrame
 Corner(ThemePanel, UDim.new(0, 12))
 Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
@@ -1180,22 +1145,20 @@ for i, slot in ipairs(colorSlots) do
     end)
 end
 
--- Toggle the theme panel
+-- Toggle the theme panel (triggered by ThemeTitleBtn in the titlebar)
 local themePanelOpen = false
-ThemeToggleBtn.MouseButton1Click:Connect(function()
+ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
-        ThemePanel.Visible = true
-        ThemePanel.Position = UDim2.new(1, 46, 0.5, -260)
-        Tween(ThemePanel, {Position = UDim2.new(1, 42, 0.5, -260)}, 0.2)
-        Tween(ThemeToggleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
-        TTBLabel.TextColor3 = Color3.new(1,1,1)
+        ThemePanel.Position = UDim2.new(1, -288, 0, 44)
+        ThemePanel.Visible  = true
+        Tween(ThemePanel, {Position = UDim2.new(1, -288, 0, 50)}, 0.2)
+        Tween(ThemeTitleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
     else
-        Tween(ThemePanel, {Position = UDim2.new(1, 46, 0.5, -260)}, 0.15)
+        Tween(ThemePanel, {Position = UDim2.new(1, -288, 0, 44)}, 0.15)
         task.delay(0.17, function() ThemePanel.Visible = false end)
-        Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_PANEL}, 0.15)
-        TTBLabel.TextColor3 = T.TEXT_DIM
-        CPWidget.Visible    = false
+        Tween(ThemeTitleBtn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15)
+        CPWidget.Visible = false
     end
 end)
 
