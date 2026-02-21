@@ -1362,7 +1362,7 @@ function Library:Notify(cfg)
     titleLbl.Text                   = title
     titleLbl.TextColor3             = T.TEXT_MAIN
     titleLbl.Font                   = Enum.Font.GothamBold
-    titleLbl.TextSize               = 13
+    titleLbl.TextSize               = 15
     titleLbl.TextXAlignment         = Enum.TextXAlignment.Left
     titleLbl.ZIndex                 = 203
     titleLbl.Parent                 = TitleRow
