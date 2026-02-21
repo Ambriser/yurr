@@ -578,69 +578,61 @@ function GeminiUI:CreateWindow(cfg)
         -- ====================================================
         function Tab:Section(cfg3)
             local text      = cfg3.Title or ""
+            local hasTitle  = text ~= ""
             local container = Instance.new("Frame")
             container.Size  = UDim2.new(1, 0, 0, 30)
             container.BackgroundTransparency = 1
             container.LayoutOrder            = NextOrder()
             container.Parent                 = Page
 
-            local function Line(xScale, xOffset)
+            if hasTitle then
+                -- Two half-lines with pill in the center
+                local function Line(xScale, xOffset)
+                    local f = Instance.new("Frame")
+                    f.BackgroundColor3 = Color3.fromRGB(48, 48, 72)
+                    f.Size             = UDim2.new(0.5, -56, 0, 1)
+                    f.Position         = UDim2.new(xScale, xOffset, 0.5, 0)
+                    f.BorderSizePixel  = 0
+                    f.Parent           = container
+                end
+                Line(0, 0); Line(0.5, 56)
+
+                local pill                  = Instance.new("Frame")
+                pill.BackgroundColor3       = Color3.fromRGB(26, 26, 44)
+                pill.BorderSizePixel        = 0
+                pill.Position               = UDim2.new(0.5, 0, 0.5, 0)
+                pill.AnchorPoint            = Vector2.new(0.5, 0.5)
+                pill.AutomaticSize          = Enum.AutomaticSize.X
+                pill.Size                   = UDim2.new(0, 0, 0, 20)
+                pill.ZIndex                 = 2
+                pill.Parent                 = container
+                Corner(pill, UDim.new(1, 0))
+                Stroke(pill, Color3.fromRGB(58, 58, 88), 1)
+
+                local pillPad               = Instance.new("UIPadding")
+                pillPad.PaddingLeft         = UDim.new(0, 10)
+                pillPad.PaddingRight        = UDim.new(0, 10)
+                pillPad.Parent              = pill
+
+                local lbl                   = Instance.new("TextLabel")
+                lbl.Size                    = UDim2.new(0, 0, 1, 0)
+                lbl.AutomaticSize           = Enum.AutomaticSize.X
+                lbl.BackgroundTransparency  = 1
+                lbl.Text                    = text:upper()
+                lbl.TextColor3              = TEXT_DIM
+                lbl.Font                    = Enum.Font.GothamBold
+                lbl.TextSize                = 9
+                lbl.ZIndex                  = 3
+                lbl.Parent                  = pill
+            else
+                -- Empty title: just a single full-width line
                 local f = Instance.new("Frame")
                 f.BackgroundColor3 = Color3.fromRGB(48, 48, 72)
-                f.Size             = UDim2.new(0.5, -56, 0, 1)
-                f.Position         = UDim2.new(xScale, xOffset, 0.5, 0)
+                f.Size             = UDim2.new(1, 0, 0, 1)
+                f.Position         = UDim2.new(0, 0, 0.5, 0)
                 f.BorderSizePixel  = 0
                 f.Parent           = container
             end
-            Line(0, 0); Line(0.5, 56)
-
-            local pill                  = Instance.new("Frame")
-            pill.BackgroundColor3       = Color3.fromRGB(26, 26, 44)
-            pill.BorderSizePixel        = 0
-            pill.Position               = UDim2.new(0.5, 0, 0.5, 0)
-            pill.AnchorPoint            = Vector2.new(0.5, 0.5)
-            pill.AutomaticSize          = Enum.AutomaticSize.X
-            pill.Size                   = UDim2.new(0, 0, 0, 20)
-            pill.ZIndex                 = 2
-            pill.Parent                 = container
-            Corner(pill, UDim.new(1, 0))
-            Stroke(pill, Color3.fromRGB(58, 58, 88), 1)
-
-            local pillPad               = Instance.new("UIPadding")
-            pillPad.PaddingLeft         = UDim.new(0, 9)
-            pillPad.PaddingRight        = UDim.new(0, 9)
-            pillPad.Parent              = pill
-
-            local pillRow               = Instance.new("UIListLayout")
-            pillRow.FillDirection       = Enum.FillDirection.Horizontal
-            pillRow.VerticalAlignment   = Enum.VerticalAlignment.Center
-            pillRow.HorizontalAlignment = Enum.HorizontalAlignment.Center
-            pillRow.Padding             = UDim.new(0, 5)
-            pillRow.Parent              = pill
-
-            local function Spark()
-                local s = Instance.new("TextLabel")
-                s.Size               = UDim2.new(0, 9, 1, 0)
-                s.BackgroundTransparency = 1
-                s.Text               = "✦"
-                s.TextColor3         = ACCENT
-                s.Font               = Enum.Font.GothamBold
-                s.TextSize           = 8
-                s.ZIndex             = 3
-                s.Parent             = pill
-            end
-            Spark()
-            local lbl                  = Instance.new("TextLabel")
-            lbl.Size                   = UDim2.new(0, 0, 1, 0)
-            lbl.AutomaticSize          = Enum.AutomaticSize.X
-            lbl.BackgroundTransparency = 1
-            lbl.Text                   = text:upper()
-            lbl.TextColor3             = TEXT_DIM
-            lbl.Font                   = Enum.Font.GothamBold
-            lbl.TextSize               = 9
-            lbl.ZIndex                 = 3
-            lbl.Parent                 = pill
-            Spark()
         end
 
         -- ====================================================
