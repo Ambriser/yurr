@@ -70,7 +70,62 @@ local THEMES = {
     },
 }
 
-local T = THEMES.Default
+-- ============================================================
+-- THEME PERSISTENCE  (saves to workspace/L Hub/Theme)
+-- ============================================================
+local THEME_SAVE_PATH = "L Hub/Theme"
+
+-- Serialize a theme table → plain text  "KEY=R,G,B\n..."
+local function SerializeTheme(t)
+    local lines = {}
+    for k, v in pairs(t) do
+        local r = math.floor(v.R * 255 + 0.5)
+        local g = math.floor(v.G * 255 + 0.5)
+        local b = math.floor(v.B * 255 + 0.5)
+        table.insert(lines, k .. "=" .. r .. "," .. g .. "," .. b)
+    end
+    table.sort(lines)
+    return table.concat(lines, "\n")
+end
+
+-- Deserialize saved text → theme table (merges with Default for any missing keys)
+local function DeserializeTheme(text)
+    local t = {}
+    for k, v in pairs(THEMES.Default) do t[k] = v end  -- fallback defaults
+    for line in text:gmatch("[^\n]+") do
+        local key, r, g, b = line:match("^(%w+)=(%d+),(%d+),(%d+)$")
+        if key and r then
+            t[key] = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+        end
+    end
+    return t
+end
+
+local function SaveTheme(t)
+    pcall(function()
+        -- Make sure the folder exists (writefile creates parent dirs on most executors)
+        if not isfolder("L Hub") then makefolder("L Hub") end
+        writefile(THEME_SAVE_PATH, SerializeTheme(t))
+    end)
+end
+
+local function LoadSavedTheme()
+    -- Returns a theme table if a save file exists, otherwise nil
+    local ok, data = pcall(readfile, THEME_SAVE_PATH)
+    if ok and type(data) == "string" and #data > 0 then
+        return DeserializeTheme(data)
+    end
+    return nil
+end
+
+-- Try to load saved theme; fall back to Default
+local saved = LoadSavedTheme()
+local T = saved and saved or THEMES.Default
+
+-- If we loaded a custom saved theme, register it so ApplyTheme can reference it
+if saved then
+    THEMES["_Saved"] = saved
+end
 
 local MIN_W, MIN_H         = 480, 320
 local DEFAULT_W, DEFAULT_H = 620, 420
@@ -124,6 +179,7 @@ local function ApplyTheme(name)
     for _, fn in ipairs(themeListeners) do
         pcall(fn, T)
     end
+    SaveTheme(T)
 end
 
 local scaleListeners = {}
@@ -1136,6 +1192,8 @@ for i, slot in ipairs(colorSlots) do
             for _, fn in ipairs(themeListeners) do
                 pcall(fn, T)
             end
+            -- Persist the updated theme
+            SaveTheme(T)
         end, anchorY)
     end)
 
@@ -1181,7 +1239,7 @@ local Library = {}
 -- Or pass a custom table: Library:SetTheme({ACCENT=..., BG_MAIN=..., ...})
 function Library:SetTheme(nameOrTable)
     if type(nameOrTable) == "string" then
-        ApplyTheme(nameOrTable)
+        ApplyTheme(nameOrTable)  -- ApplyTheme already saves
         SetStatus("Theme: " .. nameOrTable)
     elseif type(nameOrTable) == "table" then
         -- Merge with Default to fill any missing keys
@@ -1189,7 +1247,7 @@ function Library:SetTheme(nameOrTable)
         for k, v in pairs(THEMES.Default) do merged[k] = v end
         for k, v in pairs(nameOrTable) do merged[k] = v end
         THEMES["_Custom"] = merged
-        ApplyTheme("_Custom")
+        ApplyTheme("_Custom")   -- ApplyTheme already saves
         SetStatus("Custom theme applied")
     end
 end
