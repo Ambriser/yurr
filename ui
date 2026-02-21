@@ -283,14 +283,37 @@ end
 
 local CloseBtn   = MakeWindowBtn(-38, Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(240, 80, 80))
 local MiniBtn    = MakeWindowBtn(-72, Color3.fromRGB(40, 40, 60),  "-", Color3.fromRGB(55, 55, 80))
-local SettingsBtn= MakeWindowBtn(-108, Color3.fromRGB(40, 40, 60), "S", Color3.fromRGB(55, 55, 80))
-local SearchBtn  = MakeWindowBtn(-144, Color3.fromRGB(40, 40, 60), "?", Color3.fromRGB(55, 55, 80))
 
 OnThemeChange(function(theme)
-    MiniBtn.BackgroundColor3     = theme.BG_ELEMENT
-    SettingsBtn.BackgroundColor3 = theme.BG_ELEMENT
-    SearchBtn.BackgroundColor3   = theme.BG_ELEMENT
+    MiniBtn.BackgroundColor3 = theme.BG_ELEMENT
 end)
+
+-- ============================================================
+-- INLINE SEARCH BOX IN TITLEBAR
+-- ============================================================
+local TitleSearchBox              = Instance.new("TextBox")
+TitleSearchBox.Size               = UDim2.new(0, 160, 0, 26)
+TitleSearchBox.Position           = UDim2.new(1, -250, 0.5, -13)
+TitleSearchBox.BackgroundColor3   = T.BG_ELEMENT
+TitleSearchBox.PlaceholderText    = "Search..."
+TitleSearchBox.PlaceholderColor3  = T.TEXT_DIM
+TitleSearchBox.Text               = ""
+TitleSearchBox.TextColor3         = T.TEXT_MAIN
+TitleSearchBox.Font               = Enum.Font.Gotham
+TitleSearchBox.TextSize           = 12
+TitleSearchBox.ClearTextOnFocus   = false
+TitleSearchBox.ZIndex             = 6
+TitleSearchBox.Parent             = TitleBar
+Corner(TitleSearchBox, UDim.new(0, 6))
+Stroke(TitleSearchBox, Color3.fromRGB(55, 55, 90), 1)
+OnThemeChange(function(theme)
+    TitleSearchBox.BackgroundColor3 = theme.BG_ELEMENT
+    TitleSearchBox.TextColor3       = theme.TEXT_MAIN
+    TitleSearchBox.PlaceholderColor3= theme.TEXT_DIM
+end)
+local TSBPad            = Instance.new("UIPadding")
+TSBPad.PaddingLeft      = UDim.new(0, 8)
+TSBPad.Parent           = TitleSearchBox
 
 do
     local dragging, dragStart, startPos = false, nil, nil
@@ -486,155 +509,8 @@ MiniBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- SETTINGS POPUP
+-- FONT SCALE (no settings popup - use Library API instead)
 -- ============================================================
-local SettingsPopup               = Instance.new("Frame")
-SettingsPopup.Name                = "SettingsPopup"
-SettingsPopup.Size                = UDim2.new(0, 260, 0, 320)
-SettingsPopup.Position            = UDim2.new(1, -270, 0, 50)
-SettingsPopup.BackgroundColor3    = T.BG_PANEL
-SettingsPopup.BorderSizePixel     = 0
-SettingsPopup.Visible             = false
-SettingsPopup.ZIndex              = 100
-SettingsPopup.Parent              = MainFrame
-Corner(SettingsPopup, UDim.new(0, 10))
-Stroke(SettingsPopup, Color3.fromRGB(55, 55, 80), 1)
-OnThemeChange(function(theme) SettingsPopup.BackgroundColor3 = theme.BG_PANEL end)
-
-local SPTitle               = Instance.new("TextLabel")
-SPTitle.Size                = UDim2.new(1, -16, 0, 36)
-SPTitle.Position            = UDim2.new(0, 12, 0, 0)
-SPTitle.BackgroundTransparency = 1
-SPTitle.Text                = "Settings"
-SPTitle.TextColor3          = T.TEXT_MAIN
-SPTitle.Font                = Enum.Font.GothamBold
-SPTitle.TextSize            = 13
-SPTitle.TextXAlignment      = Enum.TextXAlignment.Left
-SPTitle.ZIndex              = 101
-SPTitle.Parent              = SettingsPopup
-OnThemeChange(function(theme) SPTitle.TextColor3 = theme.TEXT_MAIN end)
-
-local SPDivider             = Instance.new("Frame")
-SPDivider.Size              = UDim2.new(1, -24, 0, 1)
-SPDivider.Position          = UDim2.new(0, 12, 0, 36)
-SPDivider.BackgroundColor3  = Color3.fromRGB(50, 50, 75)
-SPDivider.BorderSizePixel   = 0
-SPDivider.ZIndex            = 101
-SPDivider.Parent            = SettingsPopup
-
-local SPScroll              = Instance.new("ScrollingFrame")
-SPScroll.Size               = UDim2.new(1, -8, 1, -48)
-SPScroll.Position           = UDim2.new(0, 4, 0, 42)
-SPScroll.BackgroundTransparency = 1
-SPScroll.ScrollBarThickness = 3
-SPScroll.ScrollBarImageColor3 = T.ACCENT
-SPScroll.CanvasSize         = UDim2.new(0, 0, 0, 0)
-SPScroll.ZIndex             = 101
-SPScroll.Parent             = SettingsPopup
-OnThemeChange(function(theme) SPScroll.ScrollBarImageColor3 = theme.ACCENT end)
-
-local SPLayout              = Instance.new("UIListLayout")
-SPLayout.Padding            = UDim.new(0, 6)
-SPLayout.Parent             = SPScroll
-local SPPad                 = Instance.new("UIPadding")
-SPPad.PaddingLeft           = UDim.new(0, 8)
-SPPad.PaddingRight          = UDim.new(0, 8)
-SPPad.PaddingTop            = UDim.new(0, 4)
-SPPad.Parent                = SPScroll
-
-SPLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    SPScroll.CanvasSize = UDim2.new(0, 0, 0, SPLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local function SPLabel(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size  = UDim2.new(1, 0, 0, 18)
-    lbl.BackgroundTransparency = 1
-    lbl.Text  = text
-    lbl.TextColor3 = T.TEXT_DIM
-    lbl.Font  = Enum.Font.GothamBold
-    lbl.TextSize = 9
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 102
-    lbl.Parent = SPScroll
-    OnThemeChange(function(theme) lbl.TextColor3 = theme.TEXT_DIM end)
-end
-
-local function SPThemeButton(themeName)
-    local btn               = Instance.new("TextButton")
-    btn.Size                = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3    = T.BG_ELEMENT
-    btn.Text                = themeName
-    btn.TextColor3          = T.TEXT_MAIN
-    btn.Font                = Enum.Font.Gotham
-    btn.TextSize            = 12
-    btn.ZIndex              = 102
-    btn.Parent              = SPScroll
-    Corner(btn, UDim.new(0, 6))
-    Stroke(btn, Color3.fromRGB(48, 48, 70), 1)
-    OnThemeChange(function(theme)
-        btn.BackgroundColor3 = theme.BG_ELEMENT
-        btn.TextColor3       = theme.TEXT_MAIN
-    end)
-    btn.MouseEnter:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_HOVER}, 0.12) end)
-    btn.MouseLeave:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15) end)
-    btn.MouseButton1Click:Connect(function()
-        ApplyTheme(themeName)
-        SetStatus("Theme: " .. themeName)
-    end)
-end
-
-SPLabel("THEME")
-SPThemeButton("Default")
-SPThemeButton("Midnight")
-SPThemeButton("Rose")
-SPThemeButton("Light")
-
-local function SPDivLine()
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 1)
-    f.BackgroundColor3 = Color3.fromRGB(48, 48, 72)
-    f.BorderSizePixel = 0
-    f.ZIndex = 102
-    f.Parent = SPScroll
-end
-
-SPDivLine()
-SPLabel("WINDOW SIZE")
-
-local sizeOptions = {{"Small", 0.8}, {"Default", 1.0}, {"Large", 1.25}, {"XL", 1.5}}
-for _, opt in ipairs(sizeOptions) do
-    local label, scale = opt[1], opt[2]
-    local btn               = Instance.new("TextButton")
-    btn.Size                = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3    = T.BG_ELEMENT
-    btn.Text                = label
-    btn.TextColor3          = T.TEXT_MAIN
-    btn.Font                = Enum.Font.Gotham
-    btn.TextSize            = 12
-    btn.ZIndex              = 102
-    btn.Parent              = SPScroll
-    Corner(btn, UDim.new(0, 6))
-    Stroke(btn, Color3.fromRGB(48, 48, 70), 1)
-    OnThemeChange(function(theme)
-        btn.BackgroundColor3 = theme.BG_ELEMENT
-        btn.TextColor3       = theme.TEXT_MAIN
-    end)
-    btn.MouseEnter:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_HOVER}, 0.12) end)
-    btn.MouseLeave:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15) end)
-    btn.MouseButton1Click:Connect(function()
-        local newW = DEFAULT_W * scale
-        local newH = DEFAULT_H * scale
-        Tween(MainGroup, {Size = UDim2.new(0, newW, 0, newH)}, 0.25)
-        ApplyScale(scale)
-        SetStatus("Size: " .. label)
-    end)
-end
-
-SPDivLine()
-SPLabel("FONT SIZE")
-
-local fontSizes = {{"Small", 0.85}, {"Normal", 1.0}, {"Large", 1.2}}
 local currentFontScale = 1.0
 local fontScaleListeners = {}
 local function OnFontScaleChange(fn) table.insert(fontScaleListeners, fn) end
@@ -643,183 +519,328 @@ local function ApplyFontScale(s)
     for _, fn in ipairs(fontScaleListeners) do pcall(fn, s) end
 end
 
-for _, opt in ipairs(fontSizes) do
-    local label, scale = opt[1], opt[2]
-    local btn               = Instance.new("TextButton")
-    btn.Size                = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3    = T.BG_ELEMENT
-    btn.Text                = label
-    btn.TextColor3          = T.TEXT_MAIN
-    btn.Font                = Enum.Font.Gotham
-    btn.TextSize            = 12
-    btn.ZIndex              = 102
-    btn.Parent              = SPScroll
-    Corner(btn, UDim.new(0, 6))
-    Stroke(btn, Color3.fromRGB(48, 48, 70), 1)
-    OnThemeChange(function(theme)
-        btn.BackgroundColor3 = theme.BG_ELEMENT
-        btn.TextColor3       = theme.TEXT_MAIN
-    end)
-    btn.MouseEnter:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_HOVER}, 0.12) end)
-    btn.MouseLeave:Connect(function() Tween(btn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15) end)
-    btn.MouseButton1Click:Connect(function()
-        ApplyFontScale(scale)
-        SetStatus("Font: " .. label)
-    end)
-end
-
-local settingsOpen = false
-SettingsBtn.MouseButton1Click:Connect(function()
-    settingsOpen = not settingsOpen
-    SettingsPopup.Visible = settingsOpen
-    Tween(SettingsBtn, {BackgroundColor3 = settingsOpen and T.ACCENT or T.BG_ELEMENT}, 0.15)
-end)
-
 -- ============================================================
--- SEARCH OVERLAY
+-- INLINE SEARCH DROPDOWN (attached to titlebar search box)
 -- ============================================================
-local SearchOverlay               = Instance.new("Frame")
-SearchOverlay.Name                = "SearchOverlay"
-SearchOverlay.Size                = UDim2.new(1, -155, 1, -68)
-SearchOverlay.Position            = UDim2.new(0, 155, 0, 44)
-SearchOverlay.BackgroundColor3    = T.BG_MAIN
-SearchOverlay.BackgroundTransparency = 0.05
-SearchOverlay.BorderSizePixel     = 0
-SearchOverlay.Visible             = false
-SearchOverlay.ZIndex              = 50
-SearchOverlay.Parent              = MainFrame
-OnThemeChange(function(theme) SearchOverlay.BackgroundColor3 = theme.BG_MAIN end)
+local allSearchItems = {}
 
-local SearchBox               = Instance.new("TextBox")
-SearchBox.Size                = UDim2.new(1, -24, 0, 32)
-SearchBox.Position            = UDim2.new(0, 12, 0, 10)
-SearchBox.BackgroundColor3    = T.BG_ELEMENT
-SearchBox.PlaceholderText     = "Search..."
-SearchBox.PlaceholderColor3   = T.TEXT_DIM
-SearchBox.Text                = ""
-SearchBox.TextColor3          = T.TEXT_MAIN
-SearchBox.Font                = Enum.Font.Gotham
-SearchBox.TextSize            = 13
-SearchBox.ClearTextOnFocus    = false
-SearchBox.ZIndex              = 51
-SearchBox.Parent              = SearchOverlay
-Corner(SearchBox, UDim.new(0, 8))
-Stroke(SearchBox, Color3.fromRGB(55, 55, 90), 1)
-OnThemeChange(function(theme)
-    SearchBox.BackgroundColor3 = theme.BG_ELEMENT
-    SearchBox.TextColor3       = theme.TEXT_MAIN
-    SearchBox.PlaceholderColor3= theme.TEXT_DIM
-end)
-local SBPad = Instance.new("UIPadding")
-SBPad.PaddingLeft = UDim.new(0, 10)
-SBPad.Parent = SearchBox
+-- Dropdown panel that appears below the titlebar search box
+local SearchDropdown              = Instance.new("Frame")
+SearchDropdown.Name               = "SearchDropdown"
+SearchDropdown.Size               = UDim2.new(0, 260, 0, 0)
+SearchDropdown.Position           = UDim2.new(1, -264, 1, 4)
+SearchDropdown.BackgroundColor3   = T.BG_PANEL
+SearchDropdown.BorderSizePixel    = 0
+SearchDropdown.Visible            = false
+SearchDropdown.ZIndex             = 60
+SearchDropdown.ClipsDescendants   = true
+SearchDropdown.Parent             = TitleBar
+Corner(SearchDropdown, UDim.new(0, 8))
+Stroke(SearchDropdown, Color3.fromRGB(55, 55, 80), 1)
+OnThemeChange(function(theme) SearchDropdown.BackgroundColor3 = theme.BG_PANEL end)
 
-local SearchResults           = Instance.new("ScrollingFrame")
-SearchResults.Size            = UDim2.new(1, -24, 1, -58)
-SearchResults.Position        = UDim2.new(0, 12, 0, 52)
+local SearchResults               = Instance.new("ScrollingFrame")
+SearchResults.Size                = UDim2.new(1, -8, 1, -8)
+SearchResults.Position            = UDim2.new(0, 4, 0, 4)
 SearchResults.BackgroundTransparency = 1
-SearchResults.ScrollBarThickness = 3
-SearchResults.ScrollBarImageColor3 = T.ACCENT
-SearchResults.CanvasSize      = UDim2.new(0, 0, 0, 0)
-SearchResults.ZIndex          = 51
-SearchResults.Parent          = SearchOverlay
+SearchResults.ScrollBarThickness  = 3
+SearchResults.ScrollBarImageColor3= T.ACCENT
+SearchResults.CanvasSize          = UDim2.new(0, 0, 0, 0)
+SearchResults.ZIndex              = 61
+SearchResults.Parent              = SearchDropdown
 OnThemeChange(function(theme) SearchResults.ScrollBarImageColor3 = theme.ACCENT end)
 
-local SRLayout                = Instance.new("UIListLayout")
-SRLayout.Padding              = UDim.new(0, 5)
-SRLayout.Parent               = SearchResults
+local SRLayout                    = Instance.new("UIListLayout")
+SRLayout.Padding                  = UDim.new(0, 4)
+SRLayout.Parent                   = SearchResults
 SRLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    local h = math.min(SRLayout.AbsoluteContentSize.Y + 10, 220)
+    SearchDropdown.Size = UDim2.new(0, 260, 0, h)
     SearchResults.CanvasSize = UDim2.new(0, 0, 0, SRLayout.AbsoluteContentSize.Y + 10)
 end)
-
-local searchOpen = false
-local allSearchItems = {}
 
 local function RebuildSearch(query)
     for _, c in ipairs(SearchResults:GetChildren()) do
         if not c:IsA("UIListLayout") then c:Destroy() end
     end
     local q = query:lower()
+    local count = 0
     for _, item in ipairs(allSearchItems) do
         if q == "" or item.title:lower():find(q, 1, true) then
+            count += 1
             local row               = Instance.new("TextButton")
-            row.Size                = UDim2.new(1, 0, 0, 38)
+            row.Size                = UDim2.new(1, 0, 0, 34)
             row.BackgroundColor3    = T.BG_ELEMENT
             row.Text                = ""
-            row.ZIndex              = 52
+            row.ZIndex              = 62
             row.Parent              = SearchResults
-            Corner(row, UDim.new(0, 7))
+            Corner(row, UDim.new(0, 6))
             Stroke(row, Color3.fromRGB(38, 38, 60), 1)
             OnThemeChange(function(theme) row.BackgroundColor3 = theme.BG_ELEMENT end)
 
             local nameL             = Instance.new("TextLabel")
             nameL.Size              = UDim2.new(1, -80, 1, 0)
-            nameL.Position          = UDim2.new(0, 12, 0, 0)
+            nameL.Position          = UDim2.new(0, 10, 0, 0)
             nameL.BackgroundTransparency = 1
             nameL.Text              = item.title
             nameL.TextColor3        = T.TEXT_MAIN
             nameL.Font              = Enum.Font.Gotham
             nameL.TextSize          = 12
             nameL.TextXAlignment    = Enum.TextXAlignment.Left
-            nameL.ZIndex            = 53
+            nameL.ZIndex            = 63
             nameL.Parent            = row
             OnThemeChange(function(theme) nameL.TextColor3 = theme.TEXT_MAIN end)
 
             local tagL              = Instance.new("TextLabel")
-            tagL.Size               = UDim2.new(0, 70, 0, 20)
-            tagL.Position           = UDim2.new(1, -76, 0.5, -10)
-            tagL.BackgroundColor3   = T.BG_PANEL
+            tagL.Size               = UDim2.new(0, 64, 0, 18)
+            tagL.Position           = UDim2.new(1, -70, 0.5, -9)
+            tagL.BackgroundColor3   = T.BG_MAIN
             tagL.Text               = item.kind
             tagL.TextColor3         = T.ACCENT
             tagL.Font               = Enum.Font.GothamBold
             tagL.TextSize           = 9
-            tagL.ZIndex             = 53
+            tagL.ZIndex             = 63
             tagL.Parent             = row
             Corner(tagL, UDim.new(0, 4))
             OnThemeChange(function(theme)
-                tagL.BackgroundColor3 = theme.BG_PANEL
+                tagL.BackgroundColor3 = theme.BG_MAIN
                 tagL.TextColor3       = theme.ACCENT
             end)
 
             row.MouseEnter:Connect(function() Tween(row, {BackgroundColor3 = T.BG_HOVER}, 0.12) end)
             row.MouseLeave:Connect(function() Tween(row, {BackgroundColor3 = T.BG_ELEMENT}, 0.15) end)
             row.MouseButton1Click:Connect(function()
-                searchOpen = false
-                SearchOverlay.Visible = false
-                SearchBox.Text = ""
+                SearchDropdown.Visible = false
+                TitleSearchBox.Text = ""
                 if item.jumpFn then item.jumpFn() end
                 SetStatus("Jumped to: " .. item.title)
             end)
         end
     end
+    SearchDropdown.Visible = count > 0
 end
 
-SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    RebuildSearch(SearchBox.Text)
-end)
-
-SearchBtn.MouseButton1Click:Connect(function()
-    searchOpen = not searchOpen
-    SearchOverlay.Visible = searchOpen
-    Tween(SearchBtn, {BackgroundColor3 = searchOpen and T.ACCENT or T.BG_ELEMENT}, 0.15)
-    if searchOpen then
-        RebuildSearch("")
-        SearchBox:CaptureFocus()
+TitleSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    if TitleSearchBox.Text ~= "" then
+        RebuildSearch(TitleSearchBox.Text)
+    else
+        SearchDropdown.Visible = false
     end
 end)
+TitleSearchBox.Focused:Connect(function()
+    if TitleSearchBox.Text ~= "" then RebuildSearch(TitleSearchBox.Text) end
+end)
+TitleSearchBox.FocusLost:Connect(function()
+    task.delay(0.15, function() SearchDropdown.Visible = false end)
+end)
+
+-- ============================================================
+-- NOTIFICATION CONTAINER
+-- ============================================================
+local NotifContainer                = Instance.new("Frame")
+NotifContainer.Name                 = "NotifContainer"
+NotifContainer.Size                 = UDim2.new(0, 300, 1, 0)
+NotifContainer.Position             = UDim2.new(1, -310, 0, 0)
+NotifContainer.BackgroundTransparency = 1
+NotifContainer.ZIndex               = 200
+NotifContainer.Parent               = ScreenGui
+local NotifLayout                   = Instance.new("UIListLayout")
+NotifLayout.VerticalAlignment       = Enum.VerticalAlignment.Bottom
+NotifLayout.HorizontalAlignment     = Enum.HorizontalAlignment.Right
+NotifLayout.Padding                 = UDim.new(0, 8)
+NotifLayout.Parent                  = NotifContainer
+local NotifPad                      = Instance.new("UIPadding")
+NotifPad.PaddingBottom              = UDim.new(0, 16)
+NotifPad.PaddingRight               = UDim.new(0, 0)
+NotifPad.Parent                     = NotifContainer
 
 -- ============================================================
 -- LIBRARY API
 -- ============================================================
 local Library = {}
 
+-- Set the colour theme programmatically
+-- Usage: Library:SetTheme("Midnight") -- or "Default", "Rose", "Light"
+-- Or pass a custom table: Library:SetTheme({ACCENT=..., BG_MAIN=..., ...})
+function Library:SetTheme(nameOrTable)
+    if type(nameOrTable) == "string" then
+        ApplyTheme(nameOrTable)
+        SetStatus("Theme: " .. nameOrTable)
+    elseif type(nameOrTable) == "table" then
+        -- Merge with Default to fill any missing keys
+        local merged = {}
+        for k, v in pairs(THEMES.Default) do merged[k] = v end
+        for k, v in pairs(nameOrTable) do merged[k] = v end
+        THEMES["_Custom"] = merged
+        ApplyTheme("_Custom")
+        SetStatus("Custom theme applied")
+    end
+end
+
+-- Set window size programmatically
+-- Usage: Library:SetSize(1.25) -- scale multiplier
+-- Or: Library:SetSize("Large") -- "Small"=0.8, "Default"=1.0, "Large"=1.25, "XL"=1.5
+function Library:SetSize(scaleOrName)
+    local presets = {Small=0.8, Default=1.0, Large=1.25, XL=1.5}
+    local scale = type(scaleOrName) == "string" and (presets[scaleOrName] or 1.0) or (tonumber(scaleOrName) or 1.0)
+    local newW = DEFAULT_W * scale
+    local newH = DEFAULT_H * scale
+    Tween(MainGroup, {Size = UDim2.new(0, newW, 0, newH)}, 0.25)
+    ApplyScale(scale)
+    SetStatus("Size: " .. tostring(scaleOrName))
+end
+
+-- Show a notification toast
+-- Usage:
+--   Library:Notify({ Title="Hello", Content="World!", Duration=3, Icon="🔔" })
+function Library:Notify(cfg)
+    cfg = cfg or {}
+    local title    = cfg.Title    or "Notification"
+    local content  = cfg.Content  or ""
+    local duration = cfg.Duration or 4
+    local icon     = cfg.Icon     or ""
+
+    local notif                     = Instance.new("Frame")
+    notif.Size                      = UDim2.new(1, 0, 0, 0)
+    notif.AutomaticSize             = Enum.AutomaticSize.Y
+    notif.BackgroundColor3          = T.BG_PANEL
+    notif.BorderSizePixel           = 0
+    notif.ZIndex                    = 201
+    notif.ClipsDescendants          = false
+    notif.Parent                    = NotifContainer
+    Corner(notif, UDim.new(0, 10))
+    Stroke(notif, Color3.fromRGB(55, 55, 85), 1)
+    OnThemeChange(function(theme) notif.BackgroundColor3 = theme.BG_PANEL end)
+
+    -- Accent bar on left
+    local Bar                       = Instance.new("Frame")
+    Bar.Size                        = UDim2.new(0, 3, 1, -16)
+    Bar.Position                    = UDim2.new(0, 8, 0, 8)
+    Bar.BackgroundColor3            = T.ACCENT
+    Bar.BorderSizePixel             = 0
+    Bar.ZIndex                      = 202
+    Bar.Parent                      = notif
+    Corner(Bar, UDim.new(1, 0))
+    OnThemeChange(function(theme) Bar.BackgroundColor3 = theme.ACCENT end)
+
+    local padding                   = Instance.new("UIPadding")
+    padding.PaddingLeft             = UDim.new(0, 18)
+    padding.PaddingRight            = UDim.new(0, 12)
+    padding.PaddingTop              = UDim.new(0, 10)
+    padding.PaddingBottom           = UDim.new(0, 10)
+    padding.Parent                  = notif
+
+    local inner                     = Instance.new("Frame")
+    inner.Size                      = UDim2.new(1, 0, 0, 0)
+    inner.AutomaticSize             = Enum.AutomaticSize.Y
+    inner.BackgroundTransparency    = 1
+    inner.ZIndex                    = 202
+    inner.Parent                    = notif
+    local innerLayout               = Instance.new("UIListLayout")
+    innerLayout.Padding             = UDim.new(0, 3)
+    innerLayout.Parent              = inner
+
+    local TitleRow                  = Instance.new("Frame")
+    TitleRow.Size                   = UDim2.new(1, 0, 0, 0)
+    TitleRow.AutomaticSize          = Enum.AutomaticSize.Y
+    TitleRow.BackgroundTransparency = 1
+    TitleRow.ZIndex                 = 202
+    TitleRow.Parent                 = inner
+    local TitleRowLayout            = Instance.new("UIListLayout")
+    TitleRowLayout.FillDirection    = Enum.FillDirection.Horizontal
+    TitleRowLayout.VerticalAlignment= Enum.VerticalAlignment.Center
+    TitleRowLayout.Padding          = UDim.new(0, 5)
+    TitleRowLayout.Parent           = TitleRow
+
+    if icon ~= "" then
+        local iconLbl               = Instance.new("TextLabel")
+        iconLbl.Size                = UDim2.new(0, 18, 0, 18)
+        iconLbl.BackgroundTransparency = 1
+        iconLbl.Text                = icon
+        iconLbl.Font                = Enum.Font.Gotham
+        iconLbl.TextSize            = 14
+        iconLbl.TextColor3          = T.ACCENT
+        iconLbl.ZIndex              = 203
+        iconLbl.Parent              = TitleRow
+        OnThemeChange(function(theme) iconLbl.TextColor3 = theme.ACCENT end)
+    end
+
+    local titleLbl                  = Instance.new("TextLabel")
+    titleLbl.Size                   = UDim2.new(1, 0, 0, 18)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.Text                   = title
+    titleLbl.TextColor3             = T.TEXT_MAIN
+    titleLbl.Font                   = Enum.Font.GothamBold
+    titleLbl.TextSize               = 13
+    titleLbl.TextXAlignment         = Enum.TextXAlignment.Left
+    titleLbl.ZIndex                 = 203
+    titleLbl.Parent                 = TitleRow
+    OnThemeChange(function(theme) titleLbl.TextColor3 = theme.TEXT_MAIN end)
+
+    if content ~= "" then
+        local contentLbl            = Instance.new("TextLabel")
+        contentLbl.Size             = UDim2.new(1, 0, 0, 0)
+        contentLbl.AutomaticSize    = Enum.AutomaticSize.Y
+        contentLbl.BackgroundTransparency = 1
+        contentLbl.Text             = content
+        contentLbl.TextColor3       = T.TEXT_DIM
+        contentLbl.Font             = Enum.Font.Gotham
+        contentLbl.TextSize         = 11
+        contentLbl.TextXAlignment   = Enum.TextXAlignment.Left
+        contentLbl.TextWrapped      = true
+        contentLbl.ZIndex           = 203
+        contentLbl.Parent           = inner
+        OnThemeChange(function(theme) contentLbl.TextColor3 = theme.TEXT_DIM end)
+    end
+
+    -- Progress bar at bottom
+    local ProgTrack                 = Instance.new("Frame")
+    ProgTrack.Size                  = UDim2.new(1, -2, 0, 2)
+    ProgTrack.Position              = UDim2.new(0, 1, 1, -3)
+    ProgTrack.BackgroundColor3      = Color3.fromRGB(40, 40, 65)
+    ProgTrack.BorderSizePixel       = 0
+    ProgTrack.ZIndex                = 202
+    ProgTrack.Parent                = notif
+    Corner(ProgTrack, UDim.new(1, 0))
+
+    local ProgFill                  = Instance.new("Frame")
+    ProgFill.Size                   = UDim2.new(1, 0, 1, 0)
+    ProgFill.BackgroundColor3       = T.ACCENT
+    ProgFill.BorderSizePixel        = 0
+    ProgFill.ZIndex                 = 203
+    ProgFill.Parent                 = ProgTrack
+    Corner(ProgFill, UDim.new(1, 0))
+    OnThemeChange(function(theme) ProgFill.BackgroundColor3 = theme.ACCENT end)
+
+    -- Slide in
+    notif.Position = UDim2.new(0, 20, 0, 0)
+    Tween(notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.25)
+
+    -- Progress tween
+    Tween(ProgFill, {Size = UDim2.new(0, 0, 1, 0)}, duration, Enum.EasingStyle.Linear)
+
+    -- Click to dismiss
+    local closeConn
+    local dismissed = false
+    local function Dismiss()
+        if dismissed then return end
+        dismissed = true
+        Tween(notif, {Position = UDim2.new(0, 320, 0, 0)}, 0.2)
+        task.delay(0.22, function() notif:Destroy() end)
+    end
+    notif.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then Dismiss() end
+    end)
+    task.delay(duration + 0.1, Dismiss)
+end
+
 function Library:CreateWindow(cfg)
     cfg = cfg or {}
     if cfg.Title   then TitleLabel.Text   = cfg.Title   end
     if cfg.Version then
         local vl               = Instance.new("TextLabel")
-        vl.Size                = UDim2.new(0, 38, 0, 16)
-        vl.Position            = UDim2.new(0, TitleLabel.Position.X.Offset + 140, 0.5, -8)
+        vl.Size                = UDim2.new(0, 44, 0, 16)
+        vl.Position            = UDim2.new(0, 160, 0.5, -8)
         vl.BackgroundColor3    = Color3.fromRGB(30, 30, 50)
         vl.Text                = cfg.Version
         vl.TextColor3          = T.TEXT_DIM
@@ -1766,6 +1787,291 @@ function Library:CreateWindow(cfg)
                 UpdateValLabel()
             end
 
+            return ctrl
+        end
+
+        -- -------------------------------------------------------
+        -- COLORPICKER
+        -- -------------------------------------------------------
+        -- Usage:
+        --   local cp = Tab:Colorpicker({
+        --     Title = "Background Color",
+        --     Desc  = "Pick a color",
+        --     Default = Color3.fromRGB(0, 255, 0),
+        --     Transparency = 0,   -- 0-1, optional
+        --     Locked = false,
+        --     Callback = function(color, transparency) end
+        --   })
+        --   cp:Set(Color3.fromRGB(255,0,0))
+        --   cp:Get()  --> Color3
+        function Tab:Colorpicker(cfg3)
+            local text     = cfg3.Title        or "Colorpicker"
+            local callback = cfg3.Callback
+            local hasDesc  = cfg3.Desc         ~= nil
+            local locked   = cfg3.Locked       == true
+            local current  = cfg3.Default      or Color3.fromRGB(255, 255, 255)
+            local alpha    = math.clamp(1 - (cfg3.Transparency or 0), 0, 1)
+
+            local baseH    = hasDesc and 46 or 38
+            local Row      = MakeRow(baseH, NextOrder())
+            HoverEffect(Row, function() return T.BG_ELEMENT end, function() return T.BG_HOVER end)
+            MakeTitleLabel(Row, text, hasDesc, 80)
+            if hasDesc then MakeDescLabel(Row, cfg3.Desc) end
+
+            -- Swatch button
+            local Swatch                    = Instance.new("TextButton")
+            Swatch.Size                     = UDim2.new(0, 54, 0, 24)
+            Swatch.Position                 = UDim2.new(1, -62, 0.5, -12)
+            Swatch.BackgroundColor3         = current
+            Swatch.Text                     = ""
+            Swatch.ZIndex                   = 4
+            Swatch.Parent                   = Row
+            Corner(Swatch, UDim.new(0, 5))
+            Stroke(Swatch, Color3.fromRGB(60, 60, 100), 1)
+
+            -- Checkerboard overlay for transparency hint
+            local CheckerA                  = Instance.new("UIGradient")
+            CheckerA.Color                  = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+                ColorSequenceKeypoint.new(1, Color3.new(0,0,0)),
+            })
+            CheckerA.Transparency           = NumberSequence.new(1 - alpha)
+            CheckerA.Parent                 = Swatch
+
+            local pickerOpen = false
+
+            -- Picker popup
+            local Popup                     = Instance.new("Frame")
+            Popup.Size                      = UDim2.new(0, 220, 0, 0)
+            Popup.Position                  = UDim2.new(1, -224, 1, 6)
+            Popup.BackgroundColor3          = T.BG_PANEL
+            Popup.BorderSizePixel           = 0
+            Popup.Visible                   = false
+            Popup.ZIndex                    = 80
+            Popup.ClipsDescendants          = false
+            Popup.AutomaticSize             = Enum.AutomaticSize.Y
+            Popup.Parent                    = Row
+            Corner(Popup, UDim.new(0, 10))
+            Stroke(Popup, Color3.fromRGB(55, 55, 85), 1)
+            OnThemeChange(function(theme) Popup.BackgroundColor3 = theme.BG_PANEL end)
+
+            local PopPad                    = Instance.new("UIPadding")
+            PopPad.PaddingLeft              = UDim.new(0, 10)
+            PopPad.PaddingRight             = UDim.new(0, 10)
+            PopPad.PaddingTop               = UDim.new(0, 10)
+            PopPad.PaddingBottom            = UDim.new(0, 10)
+            PopPad.Parent                   = Popup
+
+            local PopLayout                 = Instance.new("UIListLayout")
+            PopLayout.Padding               = UDim.new(0, 8)
+            PopLayout.Parent                = Popup
+
+            -- Hue / Saturation / Value sliders
+            local function MakeSlider(labelTxt, defaultVal)
+                local wrap              = Instance.new("Frame")
+                wrap.Size               = UDim2.new(1, 0, 0, 36)
+                wrap.BackgroundTransparency = 1
+                wrap.ZIndex             = 81
+                wrap.Parent             = Popup
+                local lbl               = Instance.new("TextLabel")
+                lbl.Size                = UDim2.new(1, -42, 0, 14)
+                lbl.BackgroundTransparency = 1
+                lbl.Text                = labelTxt
+                lbl.TextColor3          = T.TEXT_DIM
+                lbl.Font                = Enum.Font.GothamBold
+                lbl.TextSize            = 9
+                lbl.TextXAlignment      = Enum.TextXAlignment.Left
+                lbl.ZIndex              = 82
+                lbl.Parent              = wrap
+                OnThemeChange(function(theme) lbl.TextColor3 = theme.TEXT_DIM end)
+                local valBox            = Instance.new("TextBox")
+                valBox.Size             = UDim2.new(0, 38, 0, 14)
+                valBox.Position         = UDim2.new(1, -38, 0, 0)
+                valBox.BackgroundColor3 = Color3.fromRGB(24, 24, 42)
+                valBox.Text             = tostring(math.floor(defaultVal * 255 + 0.5))
+                valBox.TextColor3       = T.ACCENT
+                valBox.Font             = Enum.Font.GothamBold
+                valBox.TextSize         = 9
+                valBox.TextXAlignment   = Enum.TextXAlignment.Center
+                valBox.ClearTextOnFocus = true
+                valBox.ZIndex           = 82
+                valBox.Parent           = wrap
+                Corner(valBox, UDim.new(0, 3))
+                OnThemeChange(function(theme) valBox.TextColor3 = theme.ACCENT end)
+                local track             = Instance.new("Frame")
+                track.Size              = UDim2.new(1, 0, 0, 10)
+                track.Position          = UDim2.new(0, 0, 0, 18)
+                track.BackgroundColor3  = Color3.fromRGB(38, 38, 60)
+                track.BorderSizePixel   = 0
+                track.ZIndex            = 82
+                track.Parent            = wrap
+                Corner(track, UDim.new(1, 0))
+                local fill              = Instance.new("Frame")
+                fill.Size               = UDim2.new(defaultVal, 0, 1, 0)
+                fill.BackgroundColor3   = T.ACCENT
+                fill.BorderSizePixel    = 0
+                fill.ZIndex             = 83
+                fill.Parent             = track
+                Corner(fill, UDim.new(1, 0))
+                OnThemeChange(function(theme) fill.BackgroundColor3 = theme.ACCENT end)
+                local thumb             = Instance.new("Frame")
+                thumb.Size              = UDim2.new(0, 12, 0, 12)
+                thumb.Position          = UDim2.new(defaultVal, -6, 0.5, -6)
+                thumb.BackgroundColor3  = Color3.new(1, 1, 1)
+                thumb.ZIndex            = 84
+                thumb.Parent            = track
+                Corner(thumb, UDim.new(1, 0))
+                local value = defaultVal
+                local function SetVal(v)
+                    value = math.clamp(v, 0, 1)
+                    fill.Size     = UDim2.new(value, 0, 1, 0)
+                    thumb.Position= UDim2.new(value, -6, 0.5, -6)
+                    valBox.Text   = tostring(math.floor(value * 255 + 0.5))
+                end
+                local trackBtn          = Instance.new("TextButton")
+                trackBtn.Size           = UDim2.new(1, 0, 0, 20)
+                trackBtn.Position       = UDim2.new(0, 0, 0.5, -10)
+                trackBtn.BackgroundTransparency = 1
+                trackBtn.Text           = ""
+                trackBtn.ZIndex         = 85
+                trackBtn.Parent         = track
+                local draggingS = false
+                trackBtn.InputBegan:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                        draggingS = true
+                        SetVal(math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1))
+                    end
+                end)
+                UserInputService.InputChanged:Connect(function(i)
+                    if draggingS and i.UserInputType == Enum.UserInputType.MouseMovement then
+                        SetVal(math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1))
+                    end
+                end)
+                UserInputService.InputEnded:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 then draggingS = false end
+                end)
+                valBox.FocusLost:Connect(function()
+                    local n = tonumber(valBox.Text)
+                    if n then SetVal(n / 255) end
+                end)
+                return {
+                    GetValue = function() return value end,
+                    SetValue = SetVal,
+                }
+            end
+
+            -- Decompose current color to R,G,B 0-1
+            local r0 = current.R
+            local g0 = current.G
+            local b0 = current.B
+
+            local sliderR = MakeSlider("R", r0)
+            local sliderG = MakeSlider("G", g0)
+            local sliderB = MakeSlider("B", b0)
+
+            -- Transparency slider (only if Transparency was provided)
+            local sliderA
+            if cfg3.Transparency ~= nil then
+                sliderA = MakeSlider("A", alpha)
+            end
+
+            -- Preview swatch in popup
+            local PreviewSwatch             = Instance.new("Frame")
+            PreviewSwatch.Size              = UDim2.new(1, 0, 0, 20)
+            PreviewSwatch.BackgroundColor3  = current
+            PreviewSwatch.BorderSizePixel   = 0
+            PreviewSwatch.ZIndex            = 81
+            PreviewSwatch.Parent            = Popup
+            Corner(PreviewSwatch, UDim.new(0, 5))
+
+            local function UpdateColor()
+                current = Color3.new(
+                    sliderR.GetValue(),
+                    sliderG.GetValue(),
+                    sliderB.GetValue()
+                )
+                alpha = sliderA and sliderA.GetValue() or alpha
+                Tween(Swatch,        {BackgroundColor3 = current}, 0.05)
+                Tween(PreviewSwatch, {BackgroundColor3 = current}, 0.05)
+                if callback then callback(current, 1 - alpha) end
+                SetStatus(text .. " updated")
+            end
+
+            -- Wire up slider callbacks to UpdateColor
+            -- We'll patch the trackBtn InputEnded and valBox FocusLost via a simple approach:
+            -- Re-connect after creation by monkey-patching the setval calls.
+            -- Instead, re-create sliders with callback wired in.
+            -- (Sliders above already call SetVal; we connect via UserInputService.InputEnded on each)
+            -- Simpler: poll via InputEnded on the whole popup area
+            local function WireUpdate(slider)
+                -- Not straightforward to intercept the closure, so we use a changed signal approach
+                -- We'll just fire UpdateColor on every UserInputService.InputEnded inside popup
+            end
+
+            -- Use a single global connect per picker that fires update on mouse release or FocusLost
+            local function PickerInputEnded(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    task.defer(UpdateColor)
+                end
+            end
+            Popup.InputEnded:Connect(PickerInputEnded)
+            -- Also fire on each valBox FocusLost (already handled by sliders' valBox.FocusLost which calls SetVal,
+            -- but doesn't call UpdateColor; add a secondary connection via a small wrapper)
+            -- The simplest fix: after each slider's trackBtn InputEnded fires UpdateColor too.
+            -- This is taken care of by Popup.InputEnded which covers all children.
+
+            if not locked then
+                Swatch.MouseButton1Click:Connect(function()
+                    pickerOpen = not pickerOpen
+                    Popup.Visible = pickerOpen
+                    if pickerOpen then
+                        Tween(Popup, {BackgroundColor3 = T.BG_PANEL}, 0)
+                    end
+                end)
+            end
+
+            -- Close when clicking outside
+            UserInputService.InputBegan:Connect(function(i)
+                if pickerOpen and i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    task.delay(0.02, function()
+                        if not Popup:IsDescendantOf(ScreenGui) then return end
+                        local mp = UserInputService:GetMouseLocation()
+                        local abs = Popup.AbsolutePosition
+                        local sz  = Popup.AbsoluteSize
+                        if mp.X < abs.X or mp.X > abs.X + sz.X or mp.Y < abs.Y or mp.Y > abs.Y + sz.Y then
+                            if not (mp.X >= Swatch.AbsolutePosition.X and mp.X <= Swatch.AbsolutePosition.X + Swatch.AbsoluteSize.X
+                                and mp.Y >= Swatch.AbsolutePosition.Y and mp.Y <= Swatch.AbsolutePosition.Y + Swatch.AbsoluteSize.Y) then
+                                pickerOpen = false
+                                Popup.Visible = false
+                            end
+                        end
+                    end)
+                end
+            end)
+
+            table.insert(allSearchItems, {
+                title  = text,
+                kind   = "Colorpicker",
+                jumpFn = function() Activate() end
+            })
+
+            local ctrl = {}
+            function ctrl:Get() return current end
+            function ctrl:GetTransparency() return 1 - alpha end
+            function ctrl:Set(c)
+                current = c
+                sliderR.SetValue(c.R)
+                sliderG.SetValue(c.G)
+                sliderB.SetValue(c.B)
+                Swatch.BackgroundColor3         = current
+                PreviewSwatch.BackgroundColor3  = current
+                if callback then callback(current, 1 - alpha) end
+            end
+            function ctrl:SetTransparency(t)
+                alpha = 1 - math.clamp(t, 0, 1)
+                if sliderA then sliderA.SetValue(alpha) end
+                UpdateColor()
+            end
             return ctrl
         end
 
