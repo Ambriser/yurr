@@ -1316,11 +1316,10 @@ function Library:Notify(cfg)
     OnThemeChange(function(theme) Bar.BackgroundColor3 = theme.ACCENT end)
 
     local padding                   = Instance.new("UIPadding")
-    padding.PaddingLeft             = UDim.new(0, 18)
-    padding.PaddingRight            = UDim.new(0, 12)
-    padding.PaddingTop              = UDim.new(0, 10)
-    padding.PaddingBottom           = UDim.new(0, 10)
-    padding.Parent                  = notif
+    padding.PaddingLeft             = UDim.new(0, 22)
+    padding.PaddingRight            = UDim.new(0, 16)
+    padding.PaddingTop              = UDim.new(0, 14)
+    padding.PaddingBottom           = UDim.new(0, 14)
 
     local inner                     = Instance.new("Frame")
     inner.Size                      = UDim2.new(1, 0, 0, 0)
