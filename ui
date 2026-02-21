@@ -655,6 +655,551 @@ NotifPad.PaddingRight               = UDim.new(0, 0)
 NotifPad.Parent                     = NotifContainer
 
 -- ============================================================
+-- THEME BUTTON + FLOATING COLOR PICKER PANEL
+-- ============================================================
+
+-- Small pill button attached to the right edge of MainGroup
+local ThemeToggleBtn                  = Instance.new("TextButton")
+ThemeToggleBtn.Name                   = "ThemeToggleBtn"
+ThemeToggleBtn.Size                   = UDim2.new(0, 32, 0, 78)
+ThemeToggleBtn.Position               = UDim2.new(1, 6, 0.5, -39)
+ThemeToggleBtn.BackgroundColor3       = T.BG_PANEL
+ThemeToggleBtn.Text                   = ""
+ThemeToggleBtn.ZIndex                 = 20
+ThemeToggleBtn.Parent                 = MainGroup
+Corner(ThemeToggleBtn, UDim.new(0, 8))
+Stroke(ThemeToggleBtn, Color3.fromRGB(55, 55, 85), 1)
+OnThemeChange(function(theme) ThemeToggleBtn.BackgroundColor3 = theme.BG_PANEL end)
+
+-- Icon stack inside the button
+local TTBIcon1                        = Instance.new("TextLabel")
+TTBIcon1.Size                         = UDim2.new(1, 0, 0, 18)
+TTBIcon1.Position                     = UDim2.new(0, 0, 0, 10)
+TTBIcon1.BackgroundTransparency       = 1
+TTBIcon1.Text                         = "🎨"
+TTBIcon1.Font                         = Enum.Font.Gotham
+TTBIcon1.TextSize                     = 14
+TTBIcon1.ZIndex                       = 21
+TTBIcon1.Parent                       = ThemeToggleBtn
+
+local TTBLabel                        = Instance.new("TextLabel")
+TTBLabel.Size                         = UDim2.new(1, 0, 0, 36)
+TTBLabel.Position                     = UDim2.new(0, 0, 0, 30)
+TTBLabel.BackgroundTransparency       = 1
+TTBLabel.Text                         = "T\nH\nM"
+TTBLabel.Font                         = Enum.Font.GothamBold
+TTBLabel.TextSize                     = 9
+TTBLabel.TextColor3                   = T.TEXT_DIM
+TTBLabel.ZIndex                       = 21
+TTBLabel.Parent                       = ThemeToggleBtn
+OnThemeChange(function(theme) TTBLabel.TextColor3 = theme.TEXT_DIM end)
+
+-- Hover effects
+ThemeToggleBtn.MouseEnter:Connect(function()
+    Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_HOVER}, 0.12)
+end)
+ThemeToggleBtn.MouseLeave:Connect(function()
+    Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_PANEL}, 0.15)
+end)
+
+-- ============================================================
+-- FLOATING COLOR PICKER PANEL (outside the main UI)
+-- ============================================================
+local ThemePanel                      = Instance.new("Frame")
+ThemePanel.Name                       = "ThemePanel"
+ThemePanel.Size                       = UDim2.new(0, 280, 0, 520)
+ThemePanel.Position                   = UDim2.new(1, 46, 0.5, -260)
+ThemePanel.BackgroundColor3           = T.BG_PANEL
+ThemePanel.BorderSizePixel            = 0
+ThemePanel.Visible                    = false
+ThemePanel.ZIndex                     = 150
+ThemePanel.ClipsDescendants           = true
+ThemePanel.Parent                     = MainGroup
+Corner(ThemePanel, UDim.new(0, 12))
+Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
+OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
+
+-- Panel header
+local TPHeader                        = Instance.new("Frame")
+TPHeader.Size                         = UDim2.new(1, 0, 0, 44)
+TPHeader.BackgroundColor3             = T.BG_MAIN
+TPHeader.BorderSizePixel              = 0
+TPHeader.ZIndex                       = 151
+TPHeader.Parent                       = ThemePanel
+Corner(TPHeader, UDim.new(0, 12))
+OnThemeChange(function(theme) TPHeader.BackgroundColor3 = theme.BG_MAIN end)
+
+local TPHeaderMask                    = Instance.new("Frame")
+TPHeaderMask.Size                     = UDim2.new(1, 0, 0, 12)
+TPHeaderMask.Position                 = UDim2.new(0, 0, 1, -12)
+TPHeaderMask.BackgroundColor3         = T.BG_MAIN
+TPHeaderMask.BorderSizePixel          = 0
+TPHeaderMask.ZIndex                   = 151
+TPHeaderMask.Parent                   = TPHeader
+OnThemeChange(function(theme) TPHeaderMask.BackgroundColor3 = theme.BG_MAIN end)
+
+local TPDot                           = Instance.new("Frame")
+TPDot.Size                            = UDim2.new(0, 8, 0, 8)
+TPDot.Position                        = UDim2.new(0, 14, 0.5, -4)
+TPDot.BackgroundColor3                = T.ACCENT
+TPDot.ZIndex                          = 152
+TPDot.Parent                          = TPHeader
+Corner(TPDot, UDim.new(1, 0))
+OnThemeChange(function(theme) TPDot.BackgroundColor3 = theme.ACCENT end)
+
+local TPTitle                         = Instance.new("TextLabel")
+TPTitle.Size                          = UDim2.new(1, -80, 1, 0)
+TPTitle.Position                      = UDim2.new(0, 30, 0, 0)
+TPTitle.BackgroundTransparency        = 1
+TPTitle.Text                          = "Theme Editor"
+TPTitle.TextColor3                    = T.TEXT_MAIN
+TPTitle.Font                          = Enum.Font.GothamBold
+TPTitle.TextSize                      = 13
+TPTitle.TextXAlignment                = Enum.TextXAlignment.Left
+TPTitle.ZIndex                        = 152
+TPTitle.Parent                        = TPHeader
+OnThemeChange(function(theme) TPTitle.TextColor3 = theme.TEXT_MAIN end)
+
+-- Preset theme buttons row
+local PresetsBar                      = Instance.new("Frame")
+PresetsBar.Size                       = UDim2.new(1, -16, 0, 28)
+PresetsBar.Position                   = UDim2.new(0, 8, 0, 50)
+PresetsBar.BackgroundTransparency     = 1
+PresetsBar.ZIndex                     = 151
+PresetsBar.Parent                     = ThemePanel
+local PresetsLayout                   = Instance.new("UIListLayout")
+PresetsLayout.FillDirection           = Enum.FillDirection.Horizontal
+PresetsLayout.Padding                 = UDim.new(0, 5)
+PresetsLayout.Parent                  = PresetsBar
+
+local presetNames = {"Default", "Midnight", "Rose", "Light"}
+for _, pname in ipairs(presetNames) do
+    local pb                          = Instance.new("TextButton")
+    pb.Size                           = UDim2.new(0, 56, 1, 0)
+    pb.BackgroundColor3               = T.BG_ELEMENT
+    pb.Text                           = pname
+    pb.TextColor3                     = T.TEXT_DIM
+    pb.Font                           = Enum.Font.GothamBold
+    pb.TextSize                       = 9
+    pb.ZIndex                         = 152
+    pb.Parent                         = PresetsBar
+    Corner(pb, UDim.new(0, 6))
+    Stroke(pb, Color3.fromRGB(50, 50, 80), 1)
+    OnThemeChange(function(theme)
+        pb.BackgroundColor3 = theme.BG_ELEMENT
+        pb.TextColor3       = theme.TEXT_DIM
+    end)
+    pb.MouseEnter:Connect(function() Tween(pb, {BackgroundColor3 = T.BG_HOVER}, 0.12) end)
+    pb.MouseLeave:Connect(function() Tween(pb, {BackgroundColor3 = T.BG_ELEMENT}, 0.15) end)
+    pb.MouseButton1Click:Connect(function()
+        ApplyTheme(pname)
+        SetStatus("Theme: " .. pname)
+    end)
+end
+
+-- Divider
+local TPDiv                           = Instance.new("Frame")
+TPDiv.Size                            = UDim2.new(1, -16, 0, 1)
+TPDiv.Position                        = UDim2.new(0, 8, 0, 84)
+TPDiv.BackgroundColor3                = Color3.fromRGB(50, 50, 75)
+TPDiv.BorderSizePixel                 = 0
+TPDiv.ZIndex                          = 151
+TPDiv.Parent                          = ThemePanel
+
+-- Scroll area for color slots
+local TPScroll                        = Instance.new("ScrollingFrame")
+TPScroll.Size                         = UDim2.new(1, 0, 1, -90)
+TPScroll.Position                     = UDim2.new(0, 0, 0, 90)
+TPScroll.BackgroundTransparency       = 1
+TPScroll.ScrollBarThickness           = 3
+TPScroll.ScrollBarImageColor3         = T.ACCENT
+TPScroll.CanvasSize                   = UDim2.new(0, 0, 0, 0)
+TPScroll.ZIndex                       = 151
+TPScroll.Parent                       = ThemePanel
+OnThemeChange(function(theme) TPScroll.ScrollBarImageColor3 = theme.ACCENT end)
+
+local TPScrollLayout                  = Instance.new("UIListLayout")
+TPScrollLayout.Padding                = UDim.new(0, 0)
+TPScrollLayout.Parent                 = TPScroll
+TPScrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    TPScroll.CanvasSize = UDim2.new(0, 0, 0, TPScrollLayout.AbsoluteContentSize.Y + 8)
+end)
+
+local TPScrollPad                     = Instance.new("UIPadding")
+TPScrollPad.PaddingLeft               = UDim.new(0, 8)
+TPScrollPad.PaddingRight              = UDim.new(0, 8)
+TPScrollPad.PaddingTop                = UDim.new(0, 6)
+TPScrollPad.PaddingBottom             = UDim.new(0, 6)
+TPScrollPad.Parent                    = TPScroll
+
+-- ============================================================
+-- HSV COLOR PICKER WIDGET (shared, shown for one slot at a time)
+-- ============================================================
+local CPWidget                        = Instance.new("Frame")
+CPWidget.Name                         = "CPWidget"
+CPWidget.Size                         = UDim2.new(1, -16, 0, 220)
+CPWidget.BackgroundColor3             = T.BG_MAIN
+CPWidget.BorderSizePixel              = 0
+CPWidget.Visible                      = false
+CPWidget.ZIndex                       = 160
+CPWidget.ClipsDescendants             = false
+CPWidget.Parent                       = ThemePanel
+Corner(CPWidget, UDim.new(0, 8))
+Stroke(CPWidget, Color3.fromRGB(50, 50, 80), 1)
+OnThemeChange(function(theme) CPWidget.BackgroundColor3 = theme.BG_MAIN end)
+
+-- SV square (saturation x, value y)
+local SVSquare                        = Instance.new("Frame")
+SVSquare.Name                         = "SVSquare"
+SVSquare.Size                         = UDim2.new(1, -48, 1, -58)
+SVSquare.Position                     = UDim2.new(0, 8, 0, 8)
+SVSquare.BackgroundColor3             = Color3.fromHSV(0, 1, 1)
+SVSquare.ZIndex                       = 161
+SVSquare.BorderSizePixel              = 0
+SVSquare.Parent                       = CPWidget
+Corner(SVSquare, UDim.new(0, 6))
+
+-- White gradient overlay (saturation)
+local SVGradW                         = Instance.new("UIGradient")
+SVGradW.Color                         = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
+SVGradW.Transparency                  = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 1),
+})
+SVGradW.Parent                        = SVSquare
+
+-- Black gradient overlay (value)
+local SVGradBlack                     = Instance.new("Frame")
+SVGradBlack.Size                      = UDim2.new(1, 0, 1, 0)
+SVGradBlack.BackgroundColor3          = Color3.new(0,0,0)
+SVGradBlack.BackgroundTransparency    = 0
+SVGradBlack.ZIndex                    = 162
+SVGradBlack.BorderSizePixel           = 0
+SVGradBlack.Parent                    = SVSquare
+Corner(SVGradBlack, UDim.new(0, 6))
+local SVGradB                         = Instance.new("UIGradient")
+SVGradB.Color                         = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
+SVGradB.Transparency                  = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(1, 0),
+})
+SVGradB.Rotation                      = 90
+SVGradB.Parent                        = SVGradBlack
+
+-- SV cursor
+local SVCursor                        = Instance.new("Frame")
+SVCursor.Size                         = UDim2.new(0, 12, 0, 12)
+SVCursor.AnchorPoint                  = Vector2.new(0.5, 0.5)
+SVCursor.BackgroundColor3             = Color3.new(1,1,1)
+SVCursor.BorderSizePixel              = 0
+SVCursor.ZIndex                       = 164
+SVCursor.Parent                       = SVSquare
+Corner(SVCursor, UDim.new(1, 0))
+Stroke(SVCursor, Color3.new(0,0,0), 1.5)
+
+-- SV interaction button
+local SVBtn                           = Instance.new("TextButton")
+SVBtn.Size                            = UDim2.new(1, 0, 1, 0)
+SVBtn.BackgroundTransparency          = 1
+SVBtn.Text                            = ""
+SVBtn.ZIndex                          = 165
+SVBtn.Parent                          = SVSquare
+
+-- Hue strip (vertical, right side)
+local HueStrip                        = Instance.new("Frame")
+HueStrip.Size                         = UDim2.new(0, 20, 1, -58)
+HueStrip.Position                     = UDim2.new(1, -34, 0, 8)
+HueStrip.BackgroundColor3             = Color3.new(1,1,1)
+HueStrip.ZIndex                       = 161
+HueStrip.BorderSizePixel              = 0
+HueStrip.Parent                       = CPWidget
+Corner(HueStrip, UDim.new(0, 5))
+local HueGrad                         = Instance.new("UIGradient")
+HueGrad.Color                         = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,    Color3.fromHSV(0,   1, 1)),
+    ColorSequenceKeypoint.new(0.17, Color3.fromHSV(0.17,1, 1)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromHSV(0.33,1, 1)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromHSV(0.50,1, 1)),
+    ColorSequenceKeypoint.new(0.67, Color3.fromHSV(0.67,1, 1)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromHSV(0.83,1, 1)),
+    ColorSequenceKeypoint.new(1,    Color3.fromHSV(1,   1, 1)),
+})
+HueGrad.Rotation                      = 90
+HueGrad.Parent                        = HueStrip
+
+-- Hue thumb
+local HueThumb                        = Instance.new("Frame")
+HueThumb.Size                         = UDim2.new(1, 4, 0, 6)
+HueThumb.AnchorPoint                  = Vector2.new(0.5, 0.5)
+HueThumb.Position                     = UDim2.new(0.5, 0, 0, 0)
+HueThumb.BackgroundColor3             = Color3.new(1,1,1)
+HueThumb.ZIndex                       = 163
+HueThumb.BorderSizePixel              = 0
+HueThumb.Parent                       = HueStrip
+Corner(HueThumb, UDim.new(0, 3))
+Stroke(HueThumb, Color3.new(0,0,0), 1)
+
+-- Hue interaction button
+local HueBtn                          = Instance.new("TextButton")
+HueBtn.Size                           = UDim2.new(1, 0, 1, 0)
+HueBtn.BackgroundTransparency         = 1
+HueBtn.Text                           = ""
+HueBtn.ZIndex                         = 165
+HueBtn.Parent                         = HueStrip
+
+-- Hex input + preview row
+local CPBottom                        = Instance.new("Frame")
+CPBottom.Size                         = UDim2.new(1, -16, 0, 32)
+CPBottom.Position                     = UDim2.new(0, 8, 1, -40)
+CPBottom.BackgroundTransparency       = 1
+CPBottom.ZIndex                       = 161
+CPBottom.Parent                       = CPWidget
+
+local CPPreview                       = Instance.new("Frame")
+CPPreview.Size                        = UDim2.new(0, 32, 0, 28)
+CPPreview.BackgroundColor3            = Color3.new(1,1,1)
+CPPreview.ZIndex                      = 162
+CPPreview.BorderSizePixel             = 0
+CPPreview.Parent                      = CPBottom
+Corner(CPPreview, UDim.new(0, 5))
+Stroke(CPPreview, Color3.fromRGB(60,60,100), 1)
+
+local CPHexBox                        = Instance.new("TextBox")
+CPHexBox.Size                         = UDim2.new(1, -44, 1, 0)
+CPHexBox.Position                     = UDim2.new(0, 40, 0, 0)
+CPHexBox.BackgroundColor3             = T.BG_ELEMENT
+CPHexBox.Text                         = "ffffff"
+CPHexBox.TextColor3                   = T.ACCENT
+CPHexBox.Font                         = Enum.Font.GothamBold
+CPHexBox.TextSize                     = 12
+CPHexBox.ClearTextOnFocus             = true
+CPHexBox.ZIndex                       = 162
+CPHexBox.Parent                       = CPBottom
+Corner(CPHexBox, UDim.new(0, 5))
+Stroke(CPHexBox, Color3.fromRGB(55, 55, 90), 1)
+OnThemeChange(function(theme)
+    CPHexBox.BackgroundColor3 = theme.BG_ELEMENT
+    CPHexBox.TextColor3       = theme.ACCENT
+end)
+local CPHexPad                        = Instance.new("UIPadding")
+CPHexPad.PaddingLeft                  = UDim.new(0, 6)
+CPHexPad.Parent                       = CPHexBox
+
+-- Internal state for the picker
+local cpHue, cpSat, cpVal = 0, 1, 1
+local cpActiveSlot        = nil  -- which color slot key is being edited
+local cpCallback          = nil  -- function(Color3) called when color changes
+
+local function HexToColor3(hex)
+    hex = hex:gsub("#", "")
+    if #hex ~= 6 then return nil end
+    local r = tonumber(hex:sub(1,2), 16)
+    local g = tonumber(hex:sub(3,4), 16)
+    local b = tonumber(hex:sub(5,6), 16)
+    if not (r and g and b) then return nil end
+    return Color3.fromRGB(r, g, b)
+end
+
+local function Color3ToHex(c)
+    return string.format("%02x%02x%02x",
+        math.floor(c.R * 255 + 0.5),
+        math.floor(c.G * 255 + 0.5),
+        math.floor(c.B * 255 + 0.5))
+end
+
+local function UpdateCPVisuals()
+    local col = Color3.fromHSV(cpHue, cpSat, cpVal)
+    SVSquare.BackgroundColor3 = Color3.fromHSV(cpHue, 1, 1)
+    CPPreview.BackgroundColor3 = col
+    CPHexBox.Text = Color3ToHex(col)
+    SVCursor.Position = UDim2.new(cpSat, -6, 1 - cpVal, -6)
+    HueThumb.Position = UDim2.new(0.5, 0, cpHue, 0)
+    if cpCallback then cpCallback(col) end
+end
+
+local function OpenCPWidget(slotKey, currentColor, onChangeFn, anchorY)
+    cpHue, cpSat, cpVal = Color3.toHSV(currentColor)
+    cpActiveSlot = slotKey
+    cpCallback   = onChangeFn
+    CPWidget.Position = UDim2.new(0, 8, 0, anchorY)
+    CPWidget.Visible  = true
+    UpdateCPVisuals()
+end
+
+local svDragging  = false
+local hueDragging = false
+
+SVBtn.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        svDragging = true
+        local rel = i.Position - SVSquare.AbsolutePosition
+        cpSat = math.clamp(rel.X / SVSquare.AbsoluteSize.X, 0, 1)
+        cpVal = 1 - math.clamp(rel.Y / SVSquare.AbsoluteSize.Y, 0, 1)
+        UpdateCPVisuals()
+    end
+end)
+HueBtn.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        hueDragging = true
+        local rel = i.Position - HueStrip.AbsolutePosition
+        cpHue = math.clamp(rel.Y / HueStrip.AbsoluteSize.Y, 0, 1)
+        UpdateCPVisuals()
+    end
+end)
+UserInputService.InputChanged:Connect(function(i)
+    if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+    if svDragging then
+        local rel = i.Position - SVSquare.AbsolutePosition
+        cpSat = math.clamp(rel.X / SVSquare.AbsoluteSize.X, 0, 1)
+        cpVal = 1 - math.clamp(rel.Y / SVSquare.AbsoluteSize.Y, 0, 1)
+        UpdateCPVisuals()
+    end
+    if hueDragging then
+        local rel = i.Position - HueStrip.AbsolutePosition
+        cpHue = math.clamp(rel.Y / HueStrip.AbsoluteSize.Y, 0, 1)
+        UpdateCPVisuals()
+    end
+end)
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        svDragging  = false
+        hueDragging = false
+    end
+end)
+CPHexBox.FocusLost:Connect(function()
+    local c = HexToColor3(CPHexBox.Text)
+    if c then
+        cpHue, cpSat, cpVal = Color3.toHSV(c)
+        UpdateCPVisuals()
+    else
+        -- Restore valid hex
+        CPHexBox.Text = Color3ToHex(Color3.fromHSV(cpHue, cpSat, cpVal))
+    end
+end)
+
+-- ============================================================
+-- COLOR SLOT ROWS in ThemePanel scroll
+-- ============================================================
+local colorSlots = {
+    { key = "ACCENT",      label = "Accent" },
+    { key = "ACCENT_DARK", label = "Accent Dark" },
+    { key = "BG_MAIN",     label = "Background" },
+    { key = "BG_PANEL",    label = "Panel" },
+    { key = "BG_SIDEBAR",  label = "Sidebar" },
+    { key = "BG_ELEMENT",  label = "Element" },
+    { key = "BG_HOVER",    label = "Hover" },
+    { key = "TEXT_MAIN",   label = "Text" },
+    { key = "TEXT_DIM",    label = "Text Dim" },
+    { key = "GREEN",       label = "Success" },
+    { key = "RED",         label = "Danger" },
+}
+
+local slotSwatches = {}  -- key -> Frame swatch
+
+-- Custom theme table that starts as a copy of current T
+local function GetCustomTheme()
+    local ct = {}
+    for k, v in pairs(T) do ct[k] = v end
+    return ct
+end
+local customTheme = GetCustomTheme()
+
+for i, slot in ipairs(colorSlots) do
+    local row                         = Instance.new("Frame")
+    row.Size                          = UDim2.new(1, 0, 0, 32)
+    row.BackgroundTransparency        = 1
+    row.ZIndex                        = 152
+    row.Parent                        = TPScroll
+
+    local lbl                         = Instance.new("TextLabel")
+    lbl.Size                          = UDim2.new(1, -52, 1, 0)
+    lbl.BackgroundTransparency        = 1
+    lbl.Text                          = slot.label
+    lbl.TextColor3                    = T.TEXT_MAIN
+    lbl.Font                          = Enum.Font.Gotham
+    lbl.TextSize                      = 11
+    lbl.TextXAlignment                = Enum.TextXAlignment.Left
+    lbl.ZIndex                        = 153
+    lbl.Parent                        = row
+    OnThemeChange(function(theme) lbl.TextColor3 = theme.TEXT_MAIN end)
+
+    local swatch                      = Instance.new("TextButton")
+    swatch.Size                       = UDim2.new(0, 40, 0, 22)
+    swatch.Position                   = UDim2.new(1, -44, 0.5, -11)
+    swatch.BackgroundColor3           = T[slot.key]
+    swatch.Text                       = ""
+    swatch.ZIndex                     = 153
+    swatch.Parent                     = row
+    Corner(swatch, UDim.new(0, 5))
+    Stroke(swatch, Color3.fromRGB(60, 60, 100), 1)
+    slotSwatches[slot.key] = swatch
+
+    -- Divider line (not after last)
+    if i < #colorSlots then
+        local div                     = Instance.new("Frame")
+        div.Size                      = UDim2.new(1, 0, 0, 1)
+        div.BackgroundColor3          = Color3.fromRGB(40, 40, 65)
+        div.BorderSizePixel           = 0
+        div.ZIndex                    = 152
+        div.Parent                    = row
+        div.Position                  = UDim2.new(0, 0, 1, -1)
+    end
+
+    -- Open picker when swatch clicked
+    local slotKey = slot.key
+    swatch.MouseButton1Click:Connect(function()
+        -- Close if same slot already open
+        if CPWidget.Visible and cpActiveSlot == slotKey then
+            CPWidget.Visible = false
+            return
+        end
+        -- Anchor below the row inside the scroll
+        local rowAbsY    = row.AbsolutePosition.Y
+        local panelAbsY  = ThemePanel.AbsolutePosition.Y
+        local anchorY    = rowAbsY - panelAbsY + 36
+        -- Clamp so picker doesn't go off bottom
+        anchorY = math.clamp(anchorY, 90, ThemePanel.AbsoluteSize.Y - 235)
+
+        OpenCPWidget(slotKey, customTheme[slotKey] or T[slotKey], function(newColor)
+            customTheme[slotKey] = newColor
+            swatch.BackgroundColor3 = newColor
+            -- Apply live to current theme
+            T[slotKey] = newColor
+            for _, fn in ipairs(themeListeners) do
+                pcall(fn, T)
+            end
+        end, anchorY)
+    end)
+
+    -- Keep swatch color in sync with theme changes
+    OnThemeChange(function(theme)
+        if cpActiveSlot ~= slotKey then
+            swatch.BackgroundColor3 = theme[slotKey] or swatch.BackgroundColor3
+            customTheme[slotKey]    = theme[slotKey] or customTheme[slotKey]
+        end
+    end)
+end
+
+-- Toggle the theme panel
+local themePanelOpen = false
+ThemeToggleBtn.MouseButton1Click:Connect(function()
+    themePanelOpen = not themePanelOpen
+    if themePanelOpen then
+        ThemePanel.Visible = true
+        ThemePanel.Position = UDim2.new(1, 46, 0.5, -260)
+        Tween(ThemePanel, {Position = UDim2.new(1, 42, 0.5, -260)}, 0.2)
+        Tween(ThemeToggleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
+        TTBLabel.TextColor3 = Color3.new(1,1,1)
+    else
+        Tween(ThemePanel, {Position = UDim2.new(1, 46, 0.5, -260)}, 0.15)
+        task.delay(0.17, function() ThemePanel.Visible = false end)
+        Tween(ThemeToggleBtn, {BackgroundColor3 = T.BG_PANEL}, 0.15)
+        TTBLabel.TextColor3 = T.TEXT_DIM
+        CPWidget.Visible    = false
+    end
+end)
+
+-- ============================================================
 -- LIBRARY API
 -- ============================================================
 local Library = {}
