@@ -376,6 +376,11 @@ local TSBPad            = Instance.new("UIPadding")
 TSBPad.PaddingLeft      = UDim.new(0, 8)
 TSBPad.Parent           = TitleSearchBox
 
+-- These are forward-declared so the drag/resize blocks (defined before ThemePanel)
+-- can call them. The real bodies are assigned after ThemePanel is created below.
+local themePanelOpen   = false
+local SyncThemePanel   = function() end   -- stub; filled in after ThemePanel exists
+
 do
     local dragging, dragStart, startPos = false, nil, nil
     TitleBar.InputBegan:Connect(function(i)
@@ -389,6 +394,7 @@ do
             MainGroup.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + d.X,
                 startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            SyncThemePanel()
         end
     end)
     UserInputService.InputEnded:Connect(function(i)
@@ -438,6 +444,7 @@ do
             local scaleH = newH / DEFAULT_H
             local s = math.min(scaleW, scaleH)
             ApplyScale(s)
+            SyncThemePanel()
         end
     end)
     UserInputService.InputEnded:Connect(function(i)
@@ -1206,23 +1213,60 @@ for i, slot in ipairs(colorSlots) do
     end)
 end
 
+-- Fill in the real SyncThemePanel body now that ThemePanel exists.
+-- Computes position purely from MainGroup.Position offsets — no AbsolutePosition lag.
+SyncThemePanel = function()
+    if not themePanelOpen then return end
+    local mgX = MainGroup.Position.X.Offset
+    local mgY = MainGroup.Position.Y.Offset
+    local mgW = MainGroup.Size.X.Offset
+    ThemePanel.Position = UDim2.new(0, mgX + mgW + 10, 0, mgY)
+end
+
+-- Make ThemePanel header draggable — dragging it moves MainGroup too so they stay glued
+do
+    local tpDragging, tpDragStart, tpStartMG = false, nil, nil
+    TPHeader.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            tpDragging = true
+            tpDragStart = i.Position
+            tpStartMG   = MainGroup.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if tpDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = i.Position - tpDragStart
+            MainGroup.Position = UDim2.new(
+                tpStartMG.X.Scale, tpStartMG.X.Offset + d.X,
+                tpStartMG.Y.Scale, tpStartMG.Y.Offset + d.Y)
+            SyncThemePanel()
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then tpDragging = false end
+    end)
+end
+
 -- Toggle the theme panel (triggered by ThemeTitleBtn in the titlebar)
-local themePanelOpen = false
 ThemeTitleBtn.MouseButton1Click:Connect(function()
     themePanelOpen = not themePanelOpen
     if themePanelOpen then
-        -- Snap ThemePanel to the right of MainGroup, aligned to its top
-        local mgPos  = MainGroup.AbsolutePosition
-        local mgSize = MainGroup.AbsoluteSize
-        -- Start slightly offset for slide-in animation
-        ThemePanel.Position = UDim2.new(0, mgPos.X + mgSize.X + 6, 0, mgPos.Y)
+        SyncThemePanel()
+        -- Nudge left a bit for slide-in effect
+        local startX = ThemePanel.Position.X.Offset - 6
+        ThemePanel.Position = UDim2.new(0, startX, ThemePanel.Position.Y.Scale, ThemePanel.Position.Y.Offset)
         ThemePanel.Visible  = true
-        Tween(ThemePanel, {Position = UDim2.new(0, mgPos.X + mgSize.X + 10, 0, mgPos.Y)}, 0.2)
+        SyncThemePanel()  -- immediately correct position via tween target
+        local mgX = MainGroup.Position.X.Offset
+        local mgY = MainGroup.Position.Y.Offset
+        local mgW = MainGroup.Size.X.Offset
+        Tween(ThemePanel, {Position = UDim2.new(0, mgX + mgW + 10, 0, mgY)}, 0.2)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
     else
-        local mgPos  = MainGroup.AbsolutePosition
-        local mgSize = MainGroup.AbsoluteSize
-        Tween(ThemePanel, {Position = UDim2.new(0, mgPos.X + mgSize.X + 6, 0, mgPos.Y)}, 0.15)
+        local mgX = MainGroup.Position.X.Offset
+        local mgY = MainGroup.Position.Y.Offset
+        local mgW = MainGroup.Size.X.Offset
+        Tween(ThemePanel, {Position = UDim2.new(0, mgX + mgW + 4, 0, mgY)}, 0.15)
         task.delay(0.17, function() ThemePanel.Visible = false end)
         Tween(ThemeTitleBtn, {BackgroundColor3 = T.BG_ELEMENT}, 0.15)
         CPWidget.Visible = false
