@@ -1752,14 +1752,27 @@ function Library:CreateWindow(cfg)
             local value    = math.clamp(valCfg.Default or minV, minV, maxV)
             local hasDesc  = cfg3.Desc     ~= nil
 
-            local Row = MakeRow(hasDesc and 62 or 54, NextOrder())
-            MakeTitleLabel(Row, text, false, 68)
+            local Row = MakeRow(hasDesc and 70 or 58, NextOrder())
 
-            if hasDesc then MakeDescLabel(Row, cfg3.Desc, 24) end
+            -- Title pinned to top
+            local titleLbl              = Instance.new("TextLabel")
+            titleLbl.Size               = UDim2.new(1, -80, 0, 20)
+            titleLbl.Position           = UDim2.new(0, 12, 0, 7)
+            titleLbl.BackgroundTransparency = 1
+            titleLbl.Text               = text
+            titleLbl.TextColor3         = T.TEXT_MAIN
+            titleLbl.Font               = Enum.Font.Gotham
+            titleLbl.TextSize           = 13
+            titleLbl.TextXAlignment     = Enum.TextXAlignment.Left
+            titleLbl.Parent             = Row
+            OnThemeChange(function(theme) titleLbl.TextColor3 = theme.TEXT_MAIN end)
+            OnFontScaleChange(function(s) titleLbl.TextSize = math.floor(13 * s) end)
+
+            if hasDesc then MakeDescLabel(Row, cfg3.Desc, 26) end
 
             local ValBox            = Instance.new("TextBox")
-            ValBox.Size             = UDim2.new(0, 54, 0, 22)
-            ValBox.Position         = UDim2.new(1, -60, 0, 3)
+            ValBox.Size             = UDim2.new(0, 54, 0, 20)
+            ValBox.Position         = UDim2.new(1, -60, 0, 8)
             ValBox.BackgroundColor3 = Color3.fromRGB(24, 24, 42)
             ValBox.Text             = tostring(value)
             ValBox.TextColor3       = T.ACCENT
@@ -1775,7 +1788,7 @@ function Library:CreateWindow(cfg)
             OnThemeChange(function(theme) ValBox.TextColor3 = theme.ACCENT end)
             OnFontScaleChange(function(s) ValBox.TextSize = math.floor(12 * s) end)
 
-            local trackY            = hasDesc and 46 or 39
+            local trackY            = hasDesc and 52 or 36
             local Track             = Instance.new("Frame")
             Track.Size              = UDim2.new(1, -24, 0, 5)
             Track.Position          = UDim2.new(0, 12, 0, trackY)
