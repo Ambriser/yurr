@@ -752,6 +752,135 @@ NotifPad.PaddingRight               = UDim.new(0, 0)
 NotifPad.Parent                     = NotifContainer
 
 -- ============================================================
+-- FPS / PING STATS BAR  (sits above the main window, drags with it)
+-- ============================================================
+local StatsBar                        = Instance.new("TextButton")
+StatsBar.Name                         = "StatsBar"
+StatsBar.Size                         = UDim2.new(0, 130, 0, 22)
+StatsBar.Position                     = UDim2.new(0, 10, 0, -28)   -- just above TitleBar
+StatsBar.BackgroundColor3             = T.BG_PANEL
+StatsBar.Text                         = ""
+StatsBar.AutoButtonColor              = false
+StatsBar.BorderSizePixel              = 0
+StatsBar.ZIndex                       = 5
+StatsBar.Parent                       = MainFrame
+Corner(StatsBar, UDim.new(0, 7))
+Stroke(StatsBar, Color3.fromRGB(45, 45, 70), 1)
+OnThemeChange(function(theme) StatsBar.BackgroundColor3 = theme.BG_PANEL end)
+
+local StatsLayout                     = Instance.new("UIListLayout")
+StatsLayout.FillDirection             = Enum.FillDirection.Horizontal
+StatsLayout.VerticalAlignment         = Enum.VerticalAlignment.Center
+StatsLayout.HorizontalAlignment       = Enum.HorizontalAlignment.Center
+StatsLayout.Padding                   = UDim.new(0, 6)
+StatsLayout.Parent                    = StatsBar
+
+local function MakeStatLabel(defaultText, color, order)
+    local lbl                         = Instance.new("TextLabel")
+    lbl.Size                          = UDim2.new(0, 54, 1, 0)
+    lbl.BackgroundTransparency        = 1
+    lbl.Text                          = defaultText
+    lbl.Font                          = Enum.Font.GothamBold
+    lbl.TextSize                      = 10
+    lbl.TextXAlignment                = Enum.TextXAlignment.Center
+    lbl.ZIndex                        = 6
+    lbl.LayoutOrder                   = order
+    lbl.Parent                        = StatsBar
+    lbl.TextColor3                    = color
+    return lbl
+end
+
+local FpsLabel  = MakeStatLabel("FPS --", T.GREEN,  1)
+local PingLabel = MakeStatLabel("-- MS",  T.ACCENT, 3)
+
+local StatsDivider                    = Instance.new("Frame")
+StatsDivider.Size                     = UDim2.new(0, 1, 0, 12)
+StatsDivider.BackgroundColor3         = T.TEXT_DIM
+StatsDivider.BorderSizePixel          = 0
+StatsDivider.ZIndex                   = 6
+StatsDivider.LayoutOrder              = 2
+StatsDivider.Parent                   = StatsBar
+OnThemeChange(function(theme)
+    StatsDivider.BackgroundColor3 = theme.TEXT_DIM
+    StatsBar.BackgroundColor3     = theme.BG_PANEL
+end)
+
+-- Toggle visibility on click/tap
+local statsVisible = true
+local function ToggleStats()
+    statsVisible = not statsVisible
+    if statsVisible then
+        Tween(StatsBar, {Size = UDim2.new(0, 130, 0, 22), BackgroundTransparency = 0}, 0.15)
+        for _, c in ipairs(StatsBar:GetChildren()) do
+            if c:IsA("TextLabel") then Tween(c, {TextTransparency = 0}, 0.12) end
+            if c:IsA("Frame") then Tween(c, {BackgroundTransparency = 0}, 0.12) end
+        end
+    else
+        Tween(StatsBar, {Size = UDim2.new(0, 22, 0, 8), BackgroundTransparency = 0.5}, 0.15)
+        for _, c in ipairs(StatsBar:GetChildren()) do
+            if c:IsA("TextLabel") then Tween(c, {TextTransparency = 1}, 0.12) end
+            if c:IsA("Frame") then Tween(c, {BackgroundTransparency = 1}, 0.12) end
+        end
+    end
+end
+
+-- Separate click vs drag tracking for stats bar
+local statsDragStart = nil
+local statsMoved     = false
+StatsBar.InputBegan:Connect(function(i)
+    if IsDragBegin(i) then
+        statsDragStart = GetInputPosition(i)
+        statsMoved     = false
+    end
+end)
+StatsBar.InputChanged:Connect(function(i)
+    if statsDragStart and IsDragMove(i) then
+        if (GetInputPosition(i) - statsDragStart).Magnitude > 4 then
+            statsMoved = true
+        end
+    end
+end)
+StatsBar.InputEnded:Connect(function(i)
+    if IsDragEnd(i) and not statsMoved then
+        ToggleStats()
+    end
+    statsDragStart = nil
+    statsMoved     = false
+end)
+
+-- FPS counter
+local fpsFrames   = 0
+local fpsLast     = tick()
+game:GetService("RunService").RenderStepped:Connect(function()
+    fpsFrames += 1
+    local now = tick()
+    if now - fpsLast >= 0.5 then
+        local fps   = math.round(fpsFrames / (now - fpsLast))
+        fpsFrames   = 0
+        fpsLast     = now
+        if statsVisible then
+            local col = fps >= 50 and T.GREEN or (fps >= 25 and Color3.fromRGB(255, 200, 50) or T.RED)
+            FpsLabel.Text       = "FPS " .. fps
+            FpsLabel.TextColor3 = col
+        end
+    end
+end)
+
+-- Ping counter
+local StatsService = game:GetService("Stats")
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not statsVisible then return end
+    local ok, ping = pcall(function()
+        return math.round(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+    end)
+    if ok then
+        local col = ping < 80 and T.GREEN or (ping < 150 and Color3.fromRGB(255, 200, 50) or T.RED)
+        PingLabel.Text       = ping .. " MS"
+        PingLabel.TextColor3 = col
+    end
+end)
+
+-- ============================================================
 -- FLOATING COLOR PICKER PANEL
 -- ============================================================
 local ThemePanel                      = Instance.new("Frame")
