@@ -1049,8 +1049,8 @@ Stroke(SVSquare, Color3.fromRGB(80, 80, 120), 1)
 local SVGradW                         = Instance.new("UIGradient")
 SVGradW.Color                         = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
 SVGradW.Transparency                  = NumberSequence.new({
-    NumberSequenceKeypoint.new(0,     0),     -- left edge: fully opaque white
-    NumberSequenceKeypoint.new(0.999, 1),     -- FIX: use 0.999 instead of 1 to guarantee full white at left
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 1),
 })
 SVGradW.Parent                        = SVSquare
 
@@ -1066,8 +1066,8 @@ Corner(SVGradBlack, UDim.new(0, 6))
 local SVGradB                         = Instance.new("UIGradient")
 SVGradB.Color                         = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
 SVGradB.Transparency                  = NumberSequence.new({
-    NumberSequenceKeypoint.new(0,     1),     -- top: transparent
-    NumberSequenceKeypoint.new(0.999, 0),     -- FIX: use 0.999 to guarantee full black at bottom
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(1, 0),
 })
 SVGradB.Rotation                      = 90
 SVGradB.Parent                        = SVGradBlack
