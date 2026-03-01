@@ -165,7 +165,6 @@ end
 
 -- ============================================================
 -- TOUCH/MOUSE UNIFIED DRAG HELPER
--- Returns a position Vector2 from either a Mouse or Touch input object
 -- ============================================================
 local function GetInputPosition(inputObject)
     return Vector2.new(inputObject.Position.X, inputObject.Position.Y)
@@ -261,7 +260,6 @@ do
             if cg then FadeIn(cg, 0.2) end
         end
     end)
-    -- Touch tap (no drag) to open
     OpenButton.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.Touch and not moved then
             OpenButton.Visible = false
@@ -367,9 +365,9 @@ local function MakeWindowBtn(xOffset, bgColor, symbol, hoverColor)
     return btn
 end
 
-local CloseBtn   = MakeWindowBtn(-38, Color3.fromRGB(200, 60, 60), "X", Color3.fromRGB(240, 80, 80))
-local MiniBtn    = MakeWindowBtn(-72, Color3.fromRGB(40, 40, 60),  "-", Color3.fromRGB(55, 55, 80))
-local ThemeTitleBtn = MakeWindowBtn(-108, Color3.fromRGB(40, 40, 60), "🎨", Color3.fromRGB(55, 55, 80))
+local CloseBtn      = MakeWindowBtn(-38,  Color3.fromRGB(200, 60, 60),  "X",  Color3.fromRGB(240, 80, 80))
+local MiniBtn       = MakeWindowBtn(-72,  Color3.fromRGB(40, 40, 60),   "-",  Color3.fromRGB(55, 55, 80))
+local ThemeTitleBtn = MakeWindowBtn(-108, Color3.fromRGB(40, 40, 60),   "🎨", Color3.fromRGB(55, 55, 80))
 
 OnThemeChange(function(theme)
     MiniBtn.BackgroundColor3       = theme.BG_ELEMENT
@@ -395,9 +393,9 @@ TitleSearchBox.Parent             = TitleBar
 Corner(TitleSearchBox, UDim.new(0, 6))
 Stroke(TitleSearchBox, Color3.fromRGB(55, 55, 90), 1)
 OnThemeChange(function(theme)
-    TitleSearchBox.BackgroundColor3 = theme.BG_ELEMENT
-    TitleSearchBox.TextColor3       = theme.TEXT_MAIN
-    TitleSearchBox.PlaceholderColor3= theme.TEXT_DIM
+    TitleSearchBox.BackgroundColor3  = theme.BG_ELEMENT
+    TitleSearchBox.TextColor3        = theme.TEXT_MAIN
+    TitleSearchBox.PlaceholderColor3 = theme.TEXT_DIM
 end)
 local TSBPad            = Instance.new("UIPadding")
 TSBPad.PaddingLeft      = UDim.new(0, 8)
@@ -752,12 +750,12 @@ NotifPad.PaddingRight               = UDim.new(0, 0)
 NotifPad.Parent                     = NotifContainer
 
 -- ============================================================
--- FPS / PING STATS BAR  (sits above the main window, drags with it)
+-- FPS / PING STATS BAR
 -- ============================================================
 local StatsBar                        = Instance.new("TextButton")
 StatsBar.Name                         = "StatsBar"
 StatsBar.Size                         = UDim2.new(0, 130, 0, 22)
-StatsBar.Position                     = UDim2.new(0, 10, 0, -28)   -- just above TitleBar
+StatsBar.Position                     = UDim2.new(0, 10, 0, -28)
 StatsBar.BackgroundColor3             = T.BG_PANEL
 StatsBar.Text                         = ""
 StatsBar.AutoButtonColor              = false
@@ -805,7 +803,6 @@ OnThemeChange(function(theme)
     StatsBar.BackgroundColor3     = theme.BG_PANEL
 end)
 
--- Toggle visibility on click/tap
 local statsVisible = true
 local function ToggleStats()
     statsVisible = not statsVisible
@@ -824,7 +821,6 @@ local function ToggleStats()
     end
 end
 
--- Separate click vs drag tracking for stats bar
 local statsDragStart = nil
 local statsMoved     = false
 StatsBar.InputBegan:Connect(function(i)
@@ -848,7 +844,6 @@ StatsBar.InputEnded:Connect(function(i)
     statsMoved     = false
 end)
 
--- FPS counter
 local fpsFrames   = 0
 local fpsLast     = tick()
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -866,7 +861,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- Ping counter
 local StatsService = game:GetService("Stats")
 game:GetService("RunService").Heartbeat:Connect(function()
     if not statsVisible then return end
@@ -881,7 +875,7 @@ game:GetService("RunService").Heartbeat:Connect(function()
 end)
 
 -- ============================================================
--- FLOATING COLOR PICKER PANEL
+-- FLOATING THEME PANEL
 -- ============================================================
 local ThemePanel                      = Instance.new("Frame")
 ThemePanel.Name                       = "ThemePanel"
@@ -893,7 +887,8 @@ ThemePanel.ZIndex                     = 150
 ThemePanel.ClipsDescendants           = false
 ThemePanel.Parent                     = ScreenGui
 Corner(ThemePanel, UDim.new(0, 12))
-Stroke(ThemePanel, Color3.fromRGB(55, 55, 85), 1.5)
+-- FIX: brighter stroke so the panel stands out from dark backgrounds
+Stroke(ThemePanel, Color3.fromRGB(100, 100, 160), 1.5)
 OnThemeChange(function(theme) ThemePanel.BackgroundColor3 = theme.BG_PANEL end)
 
 local function SnapThemePanel()
@@ -1022,10 +1017,11 @@ TPScrollPad.Parent                    = TPScroll
 
 -- ============================================================
 -- HSV COLOR PICKER WIDGET
+-- FIX: brighter border, larger cursor, select button, fixed white corner
 -- ============================================================
 local CPWidget                        = Instance.new("Frame")
 CPWidget.Name                         = "CPWidget"
-CPWidget.Size                         = UDim2.new(1, -16, 0, 220)
+CPWidget.Size                         = UDim2.new(1, -16, 0, 250)  -- FIX: taller to fit select btn
 CPWidget.BackgroundColor3             = T.BG_MAIN
 CPWidget.BorderSizePixel              = 0
 CPWidget.Visible                      = false
@@ -1033,27 +1029,32 @@ CPWidget.ZIndex                       = 160
 CPWidget.ClipsDescendants             = false
 CPWidget.Parent                       = ThemePanel
 Corner(CPWidget, UDim.new(0, 8))
-Stroke(CPWidget, Color3.fromRGB(50, 50, 80), 1)
+-- FIX: much brighter stroke so picker stands out from dark background
+Stroke(CPWidget, Color3.fromRGB(130, 130, 210), 1.5)
 OnThemeChange(function(theme) CPWidget.BackgroundColor3 = theme.BG_MAIN end)
 
 local SVSquare                        = Instance.new("Frame")
 SVSquare.Name                         = "SVSquare"
-SVSquare.Size                         = UDim2.new(1, -48, 1, -58)
+SVSquare.Size                         = UDim2.new(1, -48, 1, -86)  -- FIX: shorter to fit select btn
 SVSquare.Position                     = UDim2.new(0, 8, 0, 8)
 SVSquare.BackgroundColor3             = Color3.fromHSV(0, 1, 1)
 SVSquare.ZIndex                       = 161
 SVSquare.BorderSizePixel              = 0
 SVSquare.Parent                       = CPWidget
 Corner(SVSquare, UDim.new(0, 6))
+-- FIX: add a visible border to the SV square itself
+Stroke(SVSquare, Color3.fromRGB(80, 80, 120), 1)
 
+-- White gradient overlay (left=white, right=transparent) — gives the white corner
 local SVGradW                         = Instance.new("UIGradient")
 SVGradW.Color                         = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
 SVGradW.Transparency                  = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0),
-    NumberSequenceKeypoint.new(1, 1),
+    NumberSequenceKeypoint.new(0,     0),     -- left edge: fully opaque white
+    NumberSequenceKeypoint.new(0.999, 1),     -- FIX: use 0.999 instead of 1 to guarantee full white at left
 })
 SVGradW.Parent                        = SVSquare
 
+-- Black gradient overlay (top=transparent, bottom=black)
 local SVGradBlack                     = Instance.new("Frame")
 SVGradBlack.Size                      = UDim2.new(1, 0, 1, 0)
 SVGradBlack.BackgroundColor3          = Color3.new(0,0,0)
@@ -1065,21 +1066,22 @@ Corner(SVGradBlack, UDim.new(0, 6))
 local SVGradB                         = Instance.new("UIGradient")
 SVGradB.Color                         = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
 SVGradB.Transparency                  = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(1, 0),
+    NumberSequenceKeypoint.new(0,     1),     -- top: transparent
+    NumberSequenceKeypoint.new(0.999, 0),     -- FIX: use 0.999 to guarantee full black at bottom
 })
 SVGradB.Rotation                      = 90
 SVGradB.Parent                        = SVGradBlack
 
+-- FIX: larger cursor (14x14) with thicker stroke for visibility
 local SVCursor                        = Instance.new("Frame")
-SVCursor.Size                         = UDim2.new(0, 12, 0, 12)
+SVCursor.Size                         = UDim2.new(0, 14, 0, 14)
 SVCursor.AnchorPoint                  = Vector2.new(0.5, 0.5)
 SVCursor.BackgroundColor3             = Color3.new(1,1,1)
 SVCursor.BorderSizePixel              = 0
 SVCursor.ZIndex                       = 164
 SVCursor.Parent                       = SVSquare
 Corner(SVCursor, UDim.new(1, 0))
-Stroke(SVCursor, Color3.new(0,0,0), 1.5)
+Stroke(SVCursor, Color3.new(0,0,0), 2)  -- FIX: thicker stroke so cursor is always visible
 
 local SVBtn                           = Instance.new("TextButton")
 SVBtn.Size                            = UDim2.new(1, 0, 1, 0)
@@ -1089,22 +1091,25 @@ SVBtn.ZIndex                          = 165
 SVBtn.Parent                          = SVSquare
 
 local HueStrip                        = Instance.new("Frame")
-HueStrip.Size                         = UDim2.new(0, 20, 1, -58)
+HueStrip.Size                         = UDim2.new(0, 20, 1, -86)  -- FIX: match SVSquare height
 HueStrip.Position                     = UDim2.new(1, -34, 0, 8)
 HueStrip.BackgroundColor3             = Color3.new(1,1,1)
 HueStrip.ZIndex                       = 161
 HueStrip.BorderSizePixel              = 0
 HueStrip.Parent                       = CPWidget
 Corner(HueStrip, UDim.new(0, 5))
+-- FIX: visible border on the hue strip too
+Stroke(HueStrip, Color3.fromRGB(80, 80, 120), 1)
+
 local HueGrad                         = Instance.new("UIGradient")
 HueGrad.Color                         = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,    Color3.fromHSV(0,   1, 1)),
-    ColorSequenceKeypoint.new(0.17, Color3.fromHSV(0.17,1, 1)),
-    ColorSequenceKeypoint.new(0.33, Color3.fromHSV(0.33,1, 1)),
-    ColorSequenceKeypoint.new(0.50, Color3.fromHSV(0.50,1, 1)),
-    ColorSequenceKeypoint.new(0.67, Color3.fromHSV(0.67,1, 1)),
-    ColorSequenceKeypoint.new(0.83, Color3.fromHSV(0.83,1, 1)),
-    ColorSequenceKeypoint.new(1,    Color3.fromHSV(1,   1, 1)),
+    ColorSequenceKeypoint.new(0,    Color3.fromHSV(0,    1, 1)),
+    ColorSequenceKeypoint.new(0.17, Color3.fromHSV(0.17, 1, 1)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromHSV(0.33, 1, 1)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromHSV(0.50, 1, 1)),
+    ColorSequenceKeypoint.new(0.67, Color3.fromHSV(0.67, 1, 1)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromHSV(0.83, 1, 1)),
+    ColorSequenceKeypoint.new(1,    Color3.fromHSV(1,    1, 1)),
 })
 HueGrad.Rotation                      = 90
 HueGrad.Parent                        = HueStrip
@@ -1127,9 +1132,10 @@ HueBtn.Text                           = ""
 HueBtn.ZIndex                         = 165
 HueBtn.Parent                         = HueStrip
 
+-- Bottom row: preview swatch + hex box
 local CPBottom                        = Instance.new("Frame")
 CPBottom.Size                         = UDim2.new(1, -16, 0, 32)
-CPBottom.Position                     = UDim2.new(0, 8, 1, -40)
+CPBottom.Position                     = UDim2.new(0, 8, 1, -72)  -- FIX: shifted up to make room for select btn
 CPBottom.BackgroundTransparency       = 1
 CPBottom.ZIndex                       = 161
 CPBottom.Parent                       = CPWidget
@@ -1141,7 +1147,7 @@ CPPreview.ZIndex                      = 162
 CPPreview.BorderSizePixel             = 0
 CPPreview.Parent                      = CPBottom
 Corner(CPPreview, UDim.new(0, 5))
-Stroke(CPPreview, Color3.fromRGB(60,60,100), 1)
+Stroke(CPPreview, Color3.fromRGB(80, 80, 140), 1)  -- FIX: slightly brighter preview border
 
 local CPHexBox                        = Instance.new("TextBox")
 CPHexBox.Size                         = UDim2.new(1, -44, 1, 0)
@@ -1163,6 +1169,27 @@ end)
 local CPHexPad                        = Instance.new("UIPadding")
 CPHexPad.PaddingLeft                  = UDim.new(0, 6)
 CPHexPad.Parent                       = CPHexBox
+
+-- FIX: "Select" confirm button — closes the picker and locks in the color
+local CPSelectBtn                     = Instance.new("TextButton")
+CPSelectBtn.Size                      = UDim2.new(1, -16, 0, 26)
+CPSelectBtn.Position                  = UDim2.new(0, 8, 1, -34)
+CPSelectBtn.BackgroundColor3          = T.ACCENT
+CPSelectBtn.Text                      = "select"
+CPSelectBtn.TextColor3                = Color3.new(1, 1, 1)
+CPSelectBtn.Font                      = Enum.Font.GothamBold
+CPSelectBtn.TextSize                  = 11
+CPSelectBtn.ZIndex                    = 162
+CPSelectBtn.Parent                    = CPWidget
+Corner(CPSelectBtn, UDim.new(0, 6))
+OnThemeChange(function(theme) CPSelectBtn.BackgroundColor3 = theme.ACCENT end)
+
+CPSelectBtn.MouseEnter:Connect(function()
+    Tween(CPSelectBtn, {BackgroundColor3 = T.ACCENT_DARK}, 0.12)
+end)
+CPSelectBtn.MouseLeave:Connect(function()
+    Tween(CPSelectBtn, {BackgroundColor3 = T.ACCENT}, 0.15)
+end)
 
 local cpHue, cpSat, cpVal = 0, 1, 1
 local cpActiveSlot        = nil
@@ -1187,11 +1214,11 @@ end
 
 local function UpdateCPVisuals()
     local col = Color3.fromHSV(cpHue, cpSat, cpVal)
-    SVSquare.BackgroundColor3 = Color3.fromHSV(cpHue, 1, 1)
+    SVSquare.BackgroundColor3  = Color3.fromHSV(cpHue, 1, 1)
     CPPreview.BackgroundColor3 = col
-    CPHexBox.Text = Color3ToHex(col)
-    SVCursor.Position = UDim2.new(cpSat, -6, 1 - cpVal, -6)
-    HueThumb.Position = UDim2.new(0.5, 0, cpHue, 0)
+    CPHexBox.Text              = Color3ToHex(col)
+    SVCursor.Position          = UDim2.new(cpSat, -7, 1 - cpVal, -7)  -- FIX: offset by 7 (half of 14px cursor)
+    HueThumb.Position          = UDim2.new(0.5, 0, cpHue, 0)
     if cpCallback then cpCallback(col) end
 end
 
@@ -1203,6 +1230,12 @@ local function OpenCPWidget(slotKey, currentColor, onChangeFn, anchorY)
     CPWidget.Visible  = true
     UpdateCPVisuals()
 end
+
+-- Close picker on select button click
+CPSelectBtn.MouseButton1Click:Connect(function()
+    CPWidget.Visible = false
+    cpActiveSlot     = nil
+end)
 
 local svDragging  = false
 local hueDragging = false
@@ -1310,7 +1343,7 @@ for i, slot in ipairs(colorSlots) do
     swatch.ZIndex                     = 153
     swatch.Parent                     = row
     Corner(swatch, UDim.new(0, 5))
-    Stroke(swatch, Color3.fromRGB(60, 60, 100), 1)
+    Stroke(swatch, Color3.fromRGB(80, 80, 130), 1)  -- FIX: brighter swatch borders
     slotSwatches[slot.key] = swatch
 
     if i < #colorSlots then
@@ -1332,7 +1365,7 @@ for i, slot in ipairs(colorSlots) do
         local rowAbsY    = row.AbsolutePosition.Y
         local panelAbsY  = ThemePanel.AbsolutePosition.Y
         local anchorY    = rowAbsY - panelAbsY + 36
-        anchorY = math.clamp(anchorY, 90, ThemePanel.AbsoluteSize.Y - 235)
+        anchorY = math.clamp(anchorY, 90, ThemePanel.AbsoluteSize.Y - 265)  -- FIX: clamp for taller picker
 
         OpenCPWidget(slotKey, customTheme[slotKey] or T[slotKey], function(newColor)
             customTheme[slotKey] = newColor
@@ -1883,7 +1916,6 @@ function Library:CreateWindow(cfg)
 
             local Row = MakeRow(hasDesc and 70 or 58, NextOrder())
 
-            -- Title pinned to top
             local titleLbl              = Instance.new("TextLabel")
             titleLbl.Size               = UDim2.new(1, -80, 0, 20)
             titleLbl.Position           = UDim2.new(0, 12, 0, 7)
@@ -2156,12 +2188,12 @@ function Library:CreateWindow(cfg)
             function ctrl:Focus() InputBox:CaptureFocus() end
             function ctrl:Blur() InputBox:ReleaseFocus() end
             function ctrl:Lock()
-                InputBox.TextEditable    = false
+                InputBox.TextEditable     = false
                 InputBox.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
                 InputBox.TextColor3       = T.TEXT_DIM
             end
             function ctrl:Unlock()
-                InputBox.TextEditable    = true
+                InputBox.TextEditable     = true
                 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 34)
                 InputBox.TextColor3       = T.TEXT_MAIN
             end
@@ -2571,7 +2603,7 @@ function Library:CreateWindow(cfg)
             Swatch.ZIndex                   = 4
             Swatch.Parent                   = Row
             Corner(Swatch, UDim.new(0, 5))
-            Stroke(Swatch, Color3.fromRGB(60, 60, 100), 1)
+            Stroke(Swatch, Color3.fromRGB(80, 80, 140), 1)  -- FIX: brighter swatch border
 
             local CheckerA                  = Instance.new("UIGradient")
             CheckerA.Color                  = ColorSequence.new({
@@ -2594,7 +2626,8 @@ function Library:CreateWindow(cfg)
             Popup.AutomaticSize             = Enum.AutomaticSize.Y
             Popup.Parent                    = Row
             Corner(Popup, UDim.new(0, 10))
-            Stroke(Popup, Color3.fromRGB(55, 55, 85), 1)
+            -- FIX: brighter popup border
+            Stroke(Popup, Color3.fromRGB(100, 100, 160), 1.5)
             OnThemeChange(function(theme) Popup.BackgroundColor3 = theme.BG_PANEL end)
 
             local PopPad                    = Instance.new("UIPadding")
@@ -2755,7 +2788,7 @@ function Library:CreateWindow(cfg)
                 if pickerOpen and IsDragBegin(i) then
                     task.delay(0.02, function()
                         if not Popup:IsDescendantOf(ScreenGui) then return end
-                        local mp = UserInputService:GetMouseLocation()
+                        local mp  = UserInputService:GetMouseLocation()
                         local abs = Popup.AbsolutePosition
                         local sz  = Popup.AbsoluteSize
                         if mp.X < abs.X or mp.X > abs.X + sz.X or mp.Y < abs.Y or mp.Y > abs.Y + sz.Y then
