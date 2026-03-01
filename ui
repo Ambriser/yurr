@@ -13,6 +13,7 @@ local ScreenGui          = Instance.new("ScreenGui")
 ScreenGui.Name           = "__UILib"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn   = false
+ScreenGui.DisplayOrder   = 2147483647
 ScreenGui.Parent         = PlayerGui
 
 local THEMES = {
@@ -1141,13 +1142,15 @@ CPBottom.ZIndex                       = 161
 CPBottom.Parent                       = CPWidget
 
 local CPPreview                       = Instance.new("Frame")
-CPPreview.Size                        = UDim2.new(0, 32, 0, 28)
+CPPreview.Size                        = UDim2.new(0, 32, 1, 0)
+CPPreview.Position                    = UDim2.new(0, 0, 0.5, 0)
+CPPreview.AnchorPoint                 = Vector2.new(0, 0.5)
 CPPreview.BackgroundColor3            = Color3.new(1,1,1)
 CPPreview.ZIndex                      = 162
 CPPreview.BorderSizePixel             = 0
 CPPreview.Parent                      = CPBottom
 Corner(CPPreview, UDim.new(0, 5))
-Stroke(CPPreview, Color3.fromRGB(80, 80, 140), 1)  -- FIX: slightly brighter preview border
+Stroke(CPPreview, Color3.fromRGB(80, 80, 140), 1)
 
 local CPHexBox                        = Instance.new("TextBox")
 CPHexBox.Size                         = UDim2.new(1, -44, 1, 0)
