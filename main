@@ -1,5 +1,6 @@
 local KEY_FILE = "LHub_Key.txt"
 local SDK_URL = "https://sdkapi-public.luarmor.net/library.lua"
+local WINDUI_URL = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
 local SCRIPT_ID = "2aa23c9675632d49560bfaca3c5f3a41"
 local GET_KEY_LINK = "https://ads.luarmor.net/get_key?for=L_Hub-pOEgMKphqeOV"
 
@@ -74,48 +75,85 @@ local function shouldPromptNewKey(code)
 end
 
 local function loadGetKeyUI(bootFailureCode, bootFailureMessage)
-    local Fluent = loadstring(game:HttpGet(
-        "https://sirius.menu/rayfield'"
-    ))()
+    local WindUI = loadstring(game:HttpGet(WINDUI_URL))()
 
-    local Window = Fluent:CreateWindow({
-        Name = "L Hub V2",
-        LoadingTitle = "Get Key",
-        LoadingSubtitle = "by L",
-        ToggleUIKeybind = "L",
+    local Window = WindUI:CreateWindow({
+        Title = "L Hub V2  |  Key System",
+        Folder = "LHub",
+        Icon = "key-round",
+        Size = UDim2.fromOffset(520, 360),
+        HideSearchBar = true,
+        OpenButton = {
+            Title = "Open L Hub",
+            CornerRadius = UDim.new(1, 0),
+            StrokeThickness = 2,
+            Enabled = true,
+            Draggable = true,
+        },
+        Topbar = {
+            Height = 42,
+            ButtonsType = "Default",
+        },
     })
 
-    local KeyTab = Window:CreateTab("Key System")
+    pcall(function()
+        Window:SetToggleKey(Enum.KeyCode.L)
+    end)
+
+    local KeyTab = Window:Tab({
+        Title = "Key System",
+        Icon = "key-round",
+        Border = true,
+    })
+
     local UserKey = ""
 
-    local function notify(title, content)
+    local function notify(title, content, duration)
         pcall(function()
-            Fluent:Notify({
+            WindUI:Notify({
                 Title = title,
                 Content = content,
-                Duration = 5,
+                Icon = "bell",
+                Duration = duration or 5,
             })
         end)
     end
 
-    KeyTab:CreateButton({
-        Name = "Get Key",
+    KeyTab:Section({
+        Title = "Enter your key to continue",
+        TextSize = 18,
+    })
+
+    KeyTab:Space()
+
+    KeyTab:Button({
+        Title = "Get Key",
+        Desc = "Copies the get-key link to your clipboard",
+        Icon = "link",
         Callback = function()
             setclipboard(GET_KEY_LINK)
             notify("L Hub", "Get-key link copied to clipboard")
         end,
     })
 
-    KeyTab:CreateInput({
-        Name = "Enter Key",
-        PlaceholderText = "",
+    KeyTab:Space()
+
+    KeyTab:Input({
+        Title = "Key",
+        Desc = "Paste your key here",
+        Placeholder = "Enter key...",
+        InputIcon = "key",
         Callback = function(text)
             UserKey = trim(text)
         end,
     })
 
-    KeyTab:CreateButton({
-        Name = "Verify Key",
+    KeyTab:Space()
+
+    KeyTab:Button({
+        Title = "Verify Key",
+        Desc = "Check and save your key",
+        Icon = "check",
         Callback = function()
             if UserKey == "" then
                 notify("L Hub", "Please paste a key first")
@@ -127,6 +165,7 @@ local function loadGetKeyUI(bootFailureCode, bootFailureMessage)
             if ok then
                 writefile(KEY_FILE, UserKey)
                 notify("L Hub", "Key valid — loading script")
+                pcall(function() Window:Destroy() end)
                 return
             end
 
