@@ -2862,6 +2862,527 @@ function Library:CreateWindow(cfg)
             return ctrl
         end
 
+
+        -- ============================================================
+        -- CYCLE BUTTON  (Tab:CycleButton)
+        -- Press the button body or > to advance, < to go back.
+        -- The button text shows the current selected option.
+        -- ============================================================
+        function Tab:CycleButton(cfg3)
+            local text      = cfg3.Title        or "CycleButton"
+            local options   = cfg3.Values        or {"Option 1", "Option 2", "Option 3"}
+            local callback  = cfg3.Callback
+            local hasDesc   = cfg3.Desc          ~= nil
+            local startIdx  = cfg3.DefaultIndex  or 1
+
+            local index   = math.clamp(startIdx, 1, #options)
+
+            local Btn               = Instance.new("TextButton")
+            Btn.Size                = UDim2.new(1, 0, 0, hasDesc and 46 or 38)
+            Btn.BackgroundColor3    = T.BG_ELEMENT
+            Btn.Text                = ""
+            Btn.LayoutOrder         = NextOrder()
+            Btn.Parent              = Page
+            Corner(Btn, UDim.new(0, 7))
+            Stroke(Btn, Color3.fromRGB(38, 38, 60))
+            HoverEffect(Btn, function() return T.BG_ELEMENT end, function() return T.BG_HOVER end)
+            OnThemeChange(function(theme) Btn.BackgroundColor3 = theme.BG_ELEMENT end)
+
+            -- Title
+            local TitleLbl          = Instance.new("TextLabel")
+            TitleLbl.Size           = UDim2.new(1, -130, 0, 20)
+            TitleLbl.Position       = hasDesc and UDim2.new(0, 12, 0, 6) or UDim2.new(0, 12, 0.5, -10)
+            TitleLbl.BackgroundTransparency = 1
+            TitleLbl.Text           = text
+            TitleLbl.TextColor3     = T.TEXT_MAIN
+            TitleLbl.Font           = Enum.Font.Gotham
+            TitleLbl.TextSize       = 13
+            TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+            TitleLbl.Parent         = Btn
+            OnThemeChange(function(theme) TitleLbl.TextColor3 = theme.TEXT_MAIN end)
+            OnFontScaleChange(function(s) TitleLbl.TextSize = math.floor(13 * s) end)
+
+            if hasDesc then
+                MakeDescLabel(Btn, cfg3.Desc)
+            end
+
+            -- Left arrow button
+            local LeftArr           = Instance.new("TextButton")
+            LeftArr.Size            = UDim2.new(0, 24, 0, 24)
+            LeftArr.Position        = UDim2.new(1, -118, 0.5, -12)
+            LeftArr.BackgroundColor3= Color3.fromRGB(30, 30, 50)
+            LeftArr.Text            = "<"
+            LeftArr.TextColor3      = T.ACCENT
+            LeftArr.Font            = Enum.Font.GothamBold
+            LeftArr.TextSize        = 12
+            LeftArr.ZIndex          = 3
+            LeftArr.Parent          = Btn
+            Corner(LeftArr, UDim.new(0, 5))
+            OnThemeChange(function(theme) LeftArr.TextColor3 = theme.ACCENT end)
+
+            -- Current value pill
+            local ValPill           = Instance.new("Frame")
+            ValPill.Size            = UDim2.new(0, 76, 0, 24)
+            ValPill.Position        = UDim2.new(1, -92, 0.5, -12)
+            ValPill.BackgroundColor3= Color3.fromRGB(24, 24, 42)
+            ValPill.ZIndex          = 2
+            ValPill.Parent          = Btn
+            Corner(ValPill, UDim.new(0, 5))
+            Stroke(ValPill, Color3.fromRGB(55, 55, 90), 1)
+
+            local ValLbl            = Instance.new("TextLabel")
+            ValLbl.Size             = UDim2.new(1, -6, 1, 0)
+            ValLbl.Position         = UDim2.new(0, 3, 0, 0)
+            ValLbl.BackgroundTransparency = 1
+            ValLbl.Text             = tostring(options[index])
+            ValLbl.TextColor3       = T.ACCENT
+            ValLbl.Font             = Enum.Font.GothamBold
+            ValLbl.TextSize         = 10
+            ValLbl.TextTruncate     = Enum.TextTruncate.AtEnd
+            ValLbl.ZIndex           = 3
+            ValLbl.Parent           = ValPill
+            OnThemeChange(function(theme) ValLbl.TextColor3 = theme.ACCENT end)
+
+            -- Right arrow button
+            local RightArr          = Instance.new("TextButton")
+            RightArr.Size           = UDim2.new(0, 24, 0, 24)
+            RightArr.Position       = UDim2.new(1, -14, 0.5, -12)
+            RightArr.BackgroundColor3= Color3.fromRGB(30, 30, 50)
+            RightArr.Text           = ">"
+            RightArr.TextColor3     = T.ACCENT
+            RightArr.Font           = Enum.Font.GothamBold
+            RightArr.TextSize       = 12
+            RightArr.ZIndex         = 3
+            RightArr.Parent         = Btn
+            Corner(RightArr, UDim.new(0, 5))
+            OnThemeChange(function(theme) RightArr.TextColor3 = theme.ACCENT end)
+
+            local function UpdateDisplay()
+                ValLbl.Text = tostring(options[index])
+                -- subtle flash
+                Tween(ValPill, {BackgroundColor3 = T.ACCENT_DARK}, 0.06)
+                task.delay(0.07, function()
+                    Tween(ValPill, {BackgroundColor3 = Color3.fromRGB(24, 24, 42)}, 0.1)
+                end)
+                if callback then callback(options[index], index) end
+                SetStatus(text .. ": " .. tostring(options[index]))
+            end
+
+            -- Main button body = advance
+            Btn.MouseButton1Click:Connect(function()
+                index = (index % #options) + 1
+                UpdateDisplay()
+            end)
+            RightArr.MouseButton1Click:Connect(function()
+                index = (index % #options) + 1
+                UpdateDisplay()
+            end)
+            LeftArr.MouseButton1Click:Connect(function()
+                index = ((index - 2) % #options) + 1
+                UpdateDisplay()
+            end)
+
+            table.insert(allSearchItems, {
+                title  = text,
+                kind   = "Cycle",
+                jumpFn = function()
+                    Activate()
+                    Page.CanvasPosition = Vector2.new(0, Btn.AbsolutePosition.Y - Page.AbsolutePosition.Y)
+                end
+            })
+
+            local ctrl = {}
+            function ctrl:Get()       return options[index] end
+            function ctrl:GetIndex()  return index end
+            function ctrl:Set(v)
+                for i, o in ipairs(options) do
+                    if o == v then index = i; break end
+                end
+                UpdateDisplay()
+            end
+            function ctrl:SetIndex(i)
+                index = math.clamp(i, 1, #options)
+                UpdateDisplay()
+            end
+            function ctrl:SetOptions(newOpts)
+                options = newOpts
+                index   = 1
+                UpdateDisplay()
+            end
+            return ctrl
+        end
+
+        -- ============================================================
+        -- LABEL  (Tab:Label)
+        -- Static informational text inside a tab page.
+        -- ============================================================
+        function Tab:Label(cfg3)
+            local text  = cfg3.Title or cfg3.Text or "Label"
+            local wrap  = cfg3.Wrap  == true
+            local color = cfg3.Color
+
+            local Lbl               = Instance.new("TextLabel")
+            Lbl.Size                = UDim2.new(1, -24, 0, wrap and 0 or 16)
+            if wrap then Lbl.AutomaticSize = Enum.AutomaticSize.Y end
+            Lbl.BackgroundTransparency = 1
+            Lbl.Text                = text
+            Lbl.TextColor3          = color or T.TEXT_DIM
+            Lbl.Font                = Enum.Font.Gotham
+            Lbl.TextSize            = 11
+            Lbl.TextXAlignment      = Enum.TextXAlignment.Left
+            Lbl.TextWrapped         = wrap
+            Lbl.LayoutOrder         = NextOrder()
+            Lbl.Parent              = Page
+            local LP                = Instance.new("UIPadding")
+            LP.PaddingLeft          = UDim.new(0, 12)
+            LP.Parent               = Lbl
+            OnThemeChange(function(theme)
+                if not color then Lbl.TextColor3 = theme.TEXT_DIM end
+            end)
+            OnFontScaleChange(function(s) Lbl.TextSize = math.floor(11 * s) end)
+
+            local ctrl = {}
+            function ctrl:Set(t)     Lbl.Text       = t   end
+            function ctrl:Get()      return Lbl.Text      end
+            function ctrl:SetColor(c) Lbl.TextColor3 = c  end
+            return ctrl
+        end
+
+        -- ============================================================
+        -- DIVIDER  (Tab:Divider)
+        -- Horizontal rule, optionally with a centred title text.
+        -- ============================================================
+        function Tab:Divider(cfg3)
+            Tab:Section(cfg3 or {Title = ""})
+        end
+
+        -- ============================================================
+        -- CHECKBOX  (Tab:Checkbox)
+        -- Square tick-box alternative to the rounded Toggle.
+        -- ============================================================
+        function Tab:Checkbox(cfg3)
+            local text     = cfg3.Title    or "Checkbox"
+            local default  = cfg3.Value    or false
+            local callback = cfg3.Callback
+            local active   = default
+            local hasDesc  = cfg3.Desc     ~= nil
+
+            local Row = MakeRow(hasDesc and 46 or 38, NextOrder())
+            HoverEffect(Row, function() return T.BG_ELEMENT end, function() return T.BG_HOVER end)
+            MakeTitleLabel(Row, text, hasDesc, 60)
+            if hasDesc then MakeDescLabel(Row, cfg3.Desc) end
+
+            local Box               = Instance.new("Frame")
+            Box.Size                = UDim2.new(0, 20, 0, 20)
+            Box.Position            = UDim2.new(1, -32, 0.5, -10)
+            Box.BackgroundColor3    = active and T.ACCENT or Color3.fromRGB(38, 38, 58)
+            Box.ZIndex              = 2
+            Box.Parent              = Row
+            Corner(Box, UDim.new(0, 4))
+            Stroke(Box, Color3.fromRGB(60, 60, 90), 1)
+            OnThemeChange(function(theme)
+                Box.BackgroundColor3 = active and theme.ACCENT or Color3.fromRGB(38, 38, 58)
+            end)
+
+            local Check             = Instance.new("TextLabel")
+            Check.Size              = UDim2.new(1, 0, 1, 0)
+            Check.BackgroundTransparency = 1
+            Check.Text              = "✓"
+            Check.TextColor3        = Color3.new(1, 1, 1)
+            Check.Font              = Enum.Font.GothamBold
+            Check.TextSize          = 13
+            Check.Visible           = active
+            Check.ZIndex            = 3
+            Check.Parent            = Box
+
+            local function Refresh()
+                Tween(Box, {BackgroundColor3 = active and T.ACCENT or Color3.fromRGB(38, 38, 58)}, 0.15)
+                Check.Visible = active
+            end
+            OnThemeChange(function() Refresh() end)
+
+            local Btn               = Instance.new("TextButton")
+            Btn.Size                = UDim2.new(1, 0, 1, 0)
+            Btn.BackgroundTransparency = 1
+            Btn.Text                = ""
+            Btn.ZIndex              = 4
+            Btn.Parent              = Row
+            Btn.MouseButton1Click:Connect(function()
+                active = not active; Refresh()
+                if callback then callback(active) end
+                SetStatus(text .. ": " .. (active and "ON" or "OFF"), active and T.GREEN or T.RED)
+            end)
+
+            table.insert(allSearchItems, {
+                title  = text,
+                kind   = "Checkbox",
+                jumpFn = function() Activate(); Page.CanvasPosition = Vector2.new(0, Row.AbsolutePosition.Y - Page.AbsolutePosition.Y) end
+            })
+
+            local ctrl = {}
+            function ctrl:Set(v) active = v; Refresh(); if callback then callback(active) end end
+            function ctrl:Get() return active end
+            return ctrl
+        end
+
+        -- ============================================================
+        -- MULTI TOGGLE  (Tab:MultiToggle)
+        -- A horizontal strip of option buttons; one is active at a time.
+        -- ============================================================
+        function Tab:MultiToggle(cfg3)
+            local text     = cfg3.Title    or "MultiToggle"
+            local options  = cfg3.Values   or {}
+            local default  = cfg3.Value    or options[1]
+            local callback = cfg3.Callback
+            local hasDesc  = cfg3.Desc     ~= nil
+            local current  = default
+
+            local rowH = hasDesc and 62 or 54
+            local Row               = Instance.new("Frame")
+            Row.Size                = UDim2.new(1, 0, 0, rowH)
+            Row.BackgroundColor3    = T.BG_ELEMENT
+            Row.LayoutOrder         = NextOrder()
+            Row.Parent              = Page
+            Corner(Row, UDim.new(0, 7))
+            Stroke(Row, Color3.fromRGB(38, 38, 60))
+            OnThemeChange(function(theme) Row.BackgroundColor3 = theme.BG_ELEMENT end)
+
+            local TitleLbl          = Instance.new("TextLabel")
+            TitleLbl.Size           = UDim2.new(1, -20, 0, 20)
+            TitleLbl.Position       = UDim2.new(0, 12, 0, 7)
+            TitleLbl.BackgroundTransparency = 1
+            TitleLbl.Text           = text
+            TitleLbl.TextColor3     = T.TEXT_MAIN
+            TitleLbl.Font           = Enum.Font.Gotham
+            TitleLbl.TextSize       = 13
+            TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+            TitleLbl.Parent         = Row
+            OnThemeChange(function(theme) TitleLbl.TextColor3 = theme.TEXT_MAIN end)
+            OnFontScaleChange(function(s) TitleLbl.TextSize = math.floor(13 * s) end)
+
+            if hasDesc then MakeDescLabel(Row, cfg3.Desc, 26) end
+
+            local Strip             = Instance.new("Frame")
+            Strip.Size              = UDim2.new(1, -24, 0, 24)
+            Strip.Position          = UDim2.new(0, 12, 1, -30)
+            Strip.BackgroundTransparency = 1
+            Strip.Parent            = Row
+            local SL                = Instance.new("UIListLayout")
+            SL.FillDirection        = Enum.FillDirection.Horizontal
+            SL.Padding              = UDim.new(0, 4)
+            SL.Parent               = Strip
+
+            local btnRefs = {}
+            local function SelectOpt(opt)
+                current = opt
+                for o, b in pairs(btnRefs) do
+                    local sel = (o == opt)
+                    Tween(b, {BackgroundColor3 = sel and T.ACCENT or Color3.fromRGB(28, 28, 48)}, 0.12)
+                    b.TextColor3 = sel and Color3.new(1,1,1) or T.TEXT_DIM
+                end
+                OnThemeChange(function(theme)
+                    for o, b in pairs(btnRefs) do
+                        b.BackgroundColor3 = (current == o) and theme.ACCENT or Color3.fromRGB(28, 28, 48)
+                        b.TextColor3 = (current == o) and Color3.new(1,1,1) or theme.TEXT_DIM
+                    end
+                end)
+                if callback then callback(current) end
+                SetStatus(text .. ": " .. tostring(current))
+            end
+
+            for _, opt in ipairs(options) do
+                local B             = Instance.new("TextButton")
+                B.Size              = UDim2.new(0, 0, 1, 0)
+                B.AutomaticSize     = Enum.AutomaticSize.X
+                B.BackgroundColor3  = (opt == current) and T.ACCENT or Color3.fromRGB(28, 28, 48)
+                B.Text              = tostring(opt)
+                B.TextColor3        = (opt == current) and Color3.new(1,1,1) or T.TEXT_DIM
+                B.Font              = Enum.Font.GothamBold
+                B.TextSize          = 11
+                B.ZIndex            = 3
+                B.Parent            = Strip
+                Corner(B, UDim.new(0, 5))
+                local BP            = Instance.new("UIPadding")
+                BP.PaddingLeft      = UDim.new(0, 8)
+                BP.PaddingRight     = UDim.new(0, 8)
+                BP.Parent           = B
+                local captOpt = opt
+                B.MouseButton1Click:Connect(function() SelectOpt(captOpt) end)
+                btnRefs[opt] = B
+            end
+
+            table.insert(allSearchItems, {
+                title  = text,
+                kind   = "MultiToggle",
+                jumpFn = function() Activate() end
+            })
+
+            local ctrl = {}
+            function ctrl:Get() return current end
+            function ctrl:Set(v) SelectOpt(v) end
+            return ctrl
+        end
+
+        -- ============================================================
+        -- PARAGRAPH  (Tab:Paragraph)
+        -- Scrollable text block with a bold title.
+        -- ============================================================
+        function Tab:Paragraph(cfg3)
+            local titleText = cfg3.Title   or "Paragraph"
+            local bodyText  = cfg3.Content or cfg3.Text or ""
+            local maxH      = cfg3.MaxHeight or 80
+
+            local rowH = 38 + maxH + 4
+
+            local Row               = Instance.new("Frame")
+            Row.Size                = UDim2.new(1, 0, 0, rowH)
+            Row.BackgroundColor3    = T.BG_ELEMENT
+            Row.LayoutOrder         = NextOrder()
+            Row.Parent              = Page
+            Corner(Row, UDim.new(0, 7))
+            Stroke(Row, Color3.fromRGB(38, 38, 60))
+            OnThemeChange(function(theme) Row.BackgroundColor3 = theme.BG_ELEMENT end)
+
+            local TLbl              = Instance.new("TextLabel")
+            TLbl.Size               = UDim2.new(1, -20, 0, 20)
+            TLbl.Position           = UDim2.new(0, 12, 0, 7)
+            TLbl.BackgroundTransparency = 1
+            TLbl.Text               = titleText
+            TLbl.TextColor3         = T.TEXT_MAIN
+            TLbl.Font               = Enum.Font.GothamBold
+            TLbl.TextSize           = 13
+            TLbl.TextXAlignment     = Enum.TextXAlignment.Left
+            TLbl.Parent             = Row
+            OnThemeChange(function(theme) TLbl.TextColor3 = theme.TEXT_MAIN end)
+
+            local Div               = Instance.new("Frame")
+            Div.Size                = UDim2.new(1, -24, 0, 1)
+            Div.Position            = UDim2.new(0, 12, 0, 30)
+            Div.BackgroundColor3    = Color3.fromRGB(48, 48, 72)
+            Div.BorderSizePixel     = 0
+            Div.Parent              = Row
+
+            local Scroll            = Instance.new("ScrollingFrame")
+            Scroll.Size             = UDim2.new(1, -24, 1, -38)
+            Scroll.Position         = UDim2.new(0, 12, 0, 34)
+            Scroll.BackgroundTransparency = 1
+            Scroll.ScrollBarThickness = 3
+            Scroll.ScrollBarImageColor3 = T.ACCENT
+            Scroll.CanvasSize       = UDim2.new(0, 0, 0, 0)
+            Scroll.Parent           = Row
+            OnThemeChange(function(theme) Scroll.ScrollBarImageColor3 = theme.ACCENT end)
+
+            local Body              = Instance.new("TextLabel")
+            Body.Size               = UDim2.new(1, -6, 0, 0)
+            Body.AutomaticSize      = Enum.AutomaticSize.Y
+            Body.BackgroundTransparency = 1
+            Body.Text               = bodyText
+            Body.TextColor3         = T.TEXT_DIM
+            Body.Font               = Enum.Font.Gotham
+            Body.TextSize           = 11
+            Body.TextXAlignment     = Enum.TextXAlignment.Left
+            Body.TextWrapped        = true
+            Body.RichText           = true
+            Body.Parent             = Scroll
+            OnThemeChange(function(theme) Body.TextColor3 = theme.TEXT_DIM end)
+            OnFontScaleChange(function(s) Body.TextSize = math.floor(11 * s) end)
+
+            Body:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                Scroll.CanvasSize = UDim2.new(0, 0, 0, Body.AbsoluteSize.Y + 4)
+            end)
+
+            local ctrl = {}
+            function ctrl:Set(t)      Body.Text  = t  end
+            function ctrl:Get()       return Body.Text end
+            function ctrl:SetTitle(t) TLbl.Text  = t  end
+            return ctrl
+        end
+
+        -- ============================================================
+        -- PROGRESS BAR  (Tab:ProgressBar)
+        -- Non-interactive animated fill bar for showing progress/values.
+        -- ============================================================
+        function Tab:ProgressBar(cfg3)
+            local text    = cfg3.Title   or "Progress"
+            local minV    = cfg3.Min     or 0
+            local maxV    = cfg3.Max     or 100
+            local val     = math.clamp(cfg3.Value or minV, minV, maxV)
+            local hasDesc = cfg3.Desc    ~= nil
+
+            local Row = MakeRow(hasDesc and 58 or 48, NextOrder())
+            OnThemeChange(function(theme) Row.BackgroundColor3 = theme.BG_ELEMENT end)
+
+            local TitleLbl          = Instance.new("TextLabel")
+            TitleLbl.Size           = UDim2.new(1, -80, 0, 20)
+            TitleLbl.Position       = UDim2.new(0, 12, 0, 7)
+            TitleLbl.BackgroundTransparency = 1
+            TitleLbl.Text           = text
+            TitleLbl.TextColor3     = T.TEXT_MAIN
+            TitleLbl.Font           = Enum.Font.Gotham
+            TitleLbl.TextSize       = 13
+            TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+            TitleLbl.Parent         = Row
+            OnThemeChange(function(theme) TitleLbl.TextColor3 = theme.TEXT_MAIN end)
+            OnFontScaleChange(function(s) TitleLbl.TextSize = math.floor(13 * s) end)
+
+            if hasDesc then MakeDescLabel(Row, cfg3.Desc, 26) end
+
+            local ValLbl            = Instance.new("TextLabel")
+            ValLbl.Size             = UDim2.new(0, 54, 0, 20)
+            ValLbl.Position         = UDim2.new(1, -60, 0, 7)
+            ValLbl.BackgroundTransparency = 1
+            ValLbl.Text             = tostring(val)
+            ValLbl.TextColor3       = T.ACCENT
+            ValLbl.Font             = Enum.Font.GothamBold
+            ValLbl.TextSize         = 12
+            ValLbl.TextXAlignment   = Enum.TextXAlignment.Right
+            ValLbl.Parent           = Row
+            OnThemeChange(function(theme) ValLbl.TextColor3 = theme.ACCENT end)
+
+            local trackY = hasDesc and 42 or 32
+            local Track             = Instance.new("Frame")
+            Track.Size              = UDim2.new(1, -24, 0, 6)
+            Track.Position          = UDim2.new(0, 12, 0, trackY)
+            Track.BackgroundColor3  = Color3.fromRGB(38, 38, 60)
+            Track.BorderSizePixel   = 0
+            Track.Parent            = Row
+            Corner(Track, UDim.new(1, 0))
+
+            local Fill              = Instance.new("Frame")
+            Fill.Size               = UDim2.new((val - minV) / math.max(maxV - minV, 1), 0, 1, 0)
+            Fill.BackgroundColor3   = T.ACCENT
+            Fill.BorderSizePixel    = 0
+            Fill.Parent             = Track
+            Corner(Fill, UDim.new(1, 0))
+            OnThemeChange(function(theme) Fill.BackgroundColor3 = theme.ACCENT end)
+
+            -- Gradient on fill
+            local FG                = Instance.new("UIGradient")
+            FG.Color                = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, T.ACCENT),
+                ColorSequenceKeypoint.new(1, T.ACCENT_DARK),
+            })
+            FG.Parent               = Fill
+            OnThemeChange(function(theme)
+                FG.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, theme.ACCENT),
+                    ColorSequenceKeypoint.new(1, theme.ACCENT_DARK),
+                })
+            end)
+
+            local ctrl = {}
+            function ctrl:Set(v)
+                val = math.clamp(v, minV, maxV)
+                local pct = (val - minV) / math.max(maxV - minV, 1)
+                Tween(Fill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.2)
+                ValLbl.Text = tostring(val)
+            end
+            function ctrl:Get()     return val  end
+            function ctrl:SetMax(m) maxV = m; ctrl:Set(val) end
+            function ctrl:SetMin(m) minV = m; ctrl:Set(val) end
+            return ctrl
+        end
+
         return Tab
     end
 
